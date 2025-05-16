@@ -12,3 +12,4 @@ plugins {
 
 rootProject.name = 'micro-service'
 include('service-discovery')
+include('api-gateway')
