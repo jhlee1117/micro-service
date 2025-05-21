@@ -17,5 +17,11 @@ spring:
         pool:
           max-active: 8
           max-idle: 8
-          max-wait: -1ms
+          max-wait: -1
           min-idle: 0
+
+jwt:
+  secret: lFMCnn04hFUty4RnSNjDDfQ8eYBySWTWis5AmbGiv6U=
+  access-token-expire-time: 3600
+  refresh-token-expire-time: 604800
+  secret-key-algorithm: HS256

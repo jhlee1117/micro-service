@@ -1,0 +1,58 @@
+package com.microservices.api_gateway.security.jwt;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+
+import com.microservices.api_gateway.security.redis.RedisService;
+
+import reactor.core.publisher.Mono;
+
+@Component
+public class JwtAuthenticationFilter implements WebFilter {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RedisService redisService;
+
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, RedisService redisService) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.redisService = redisService;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String token = extractToken(exchange.getRequest());
+
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            // 블랙리스트 확인
+            return redisService.isBlacklisted(token)
+                .flatMap(isBlackListToken -> {
+                    if (Boolean.TRUE.equals(isBlackListToken)) {
+                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().setComplete();
+                    } else {
+                        Authentication auth = jwtTokenProvider.getAuthentication(token);
+                        return chain.filter(exchange)
+                                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
+                    }
+                });
+        }
+
+        return chain.filter(exchange);
+    }
+
+    private String extractToken(ServerHttpRequest request) {
+        String token = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (token != null && token.startsWith("Bearer ")) {
+            return token.substring(7);
+        }
+        return null;
+    }
+
+}

@@ -1,4 +1,4 @@
-package com.microservices.api_gateway;
+package com.microservices.api_gateway.security.redis;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +31,7 @@ public class RedisConfig {
     @Value("${spring.data.redis.lettuce.pool.min-idle:0}") // 기본값 0
     private int minIdle;
 
-    @Value("${spring.data.redis.lettuce.pool.max-wait:-1ms}") // 기본값 -1 (무한 대기)
+    @Value("${spring.data.redis.lettuce.pool.max-wait:-1}") // 기본값 -1 (무한 대기)
     private long maxWaitMillis;
 
     @Bean
@@ -46,7 +46,7 @@ public class RedisConfig {
         poolConfig.setMaxTotal(maxActive);
         poolConfig.setMaxIdle(maxIdle);
         poolConfig.setMinIdle(minIdle);
-        poolConfig.setMaxWaitMillis(maxWaitMillis);
+        poolConfig.setMaxWait(java.time.Duration.ofMillis(maxWaitMillis));
         // poolConfig.setTestOnBorrow(true); // 풀에서 커넥션을 가져올 때 유효성 검사 (성능에 영향 줄 수 있음)
         // poolConfig.setTestOnReturn(true); // 풀에 커넥션을 반환할 때 유효성 검사 (성능에 영향 줄 수 있음)
 
