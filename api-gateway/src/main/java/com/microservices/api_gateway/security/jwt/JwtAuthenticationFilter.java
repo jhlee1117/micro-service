@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter implements WebFilter {
         String token = extractToken(exchange.getRequest());
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
-            // 블랙리스트 확인
+            
             return redisService.isBlacklisted(token)
                 .flatMap(isBlackListToken -> {
                     if (Boolean.TRUE.equals(isBlackListToken)) {
@@ -44,7 +44,9 @@ public class JwtAuthenticationFilter implements WebFilter {
                 });
         }
 
-        return chain.filter(exchange);
+        // If the token is not valid or not present, continue the filter chain
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        return exchange.getResponse().setComplete();
     }
 
     private String extractToken(ServerHttpRequest request) {

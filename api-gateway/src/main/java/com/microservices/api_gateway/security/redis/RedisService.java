@@ -5,16 +5,16 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.QueryTimeoutException;
-import org.springframework.data.redis.RedisConnectionFailureException; // ?????? ???? ???
-import org.springframework.data.redis.core.RedisTemplate; // ?????? ???? ???
-import org.springframework.stereotype.Service; // ???? ????
+import org.springframework.data.redis.RedisConnectionFailureException; // Redis 연결 실패 예외
+import org.springframework.data.redis.core.RedisTemplate; // Redis 템플릿
+import org.springframework.stereotype.Service; // 서비스 어노테이션
 
-import reactor.core.publisher.Mono; // ???? ????
+import reactor.core.publisher.Mono; // 리액터 Mono
 
 @Service
 public class RedisService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RedisService.class); // ??? ???
+    private static final Logger logger = LoggerFactory.getLogger(RedisService.class); // 로거 생성
     private final RedisTemplate<String, Object> redisTemplate;
 
     public RedisService(RedisTemplate<String, Object> redisTemplate) {
@@ -24,11 +24,11 @@ public class RedisService {
     public Mono<Boolean> isBlacklisted(String token) {
         return Mono.fromCallable(() -> {
             try {
-                return redisTemplate.hasKey(token);
+                return redisTemplate.hasKey("blacklist:" + token); // Redis에서 키 존재 여부 확인
             } catch (RedisConnectionFailureException | QueryTimeoutException e) {
                 logger.error("Redis connection error while checking blacklist for token: {}", token, e);
-                return false; // Redis ???? ?? ??????? false ??? (????????? ??????? ????)
-                              // ??? ??? ?????? ????? ?????? ?? ??????.
+                return false; // Redis 연결 실패 시 false 반환 (서비스 지속성을 위해)
+                              // 필요에 따라 사용자 정의 예외를 던질 수도 있음.
                               // throw new CustomRedisUnavailableException("Redis is unavailable", e);
             }
         });
@@ -40,12 +40,11 @@ public class RedisService {
                 redisTemplate.opsForValue().set(token, "blacklisted", Duration.ofMillis(expirationTime));
             } catch (RedisConnectionFailureException | QueryTimeoutException e) {
                 logger.error("Redis connection error while blacklisting token: {}", token, e);
-                // ?? ???, Mono?? ???? ?????? ???????? ????,
-                // ??? ?????? ?????? ???? ????? ?? ??????.
-                // Mono.error(new CustomRedisUnavailableException("Failed to blacklist token", e)) ?????? ?????? ???? ???? ????
-                // ?????? ????? ?????? Mono?? ??????? ???? ?????? ????.
-                // ?????? ????? onError ????? ??? ????.
-                throw e; // ????? ??? ???? Mono?? ???? ?????? ????? ??
+                // 여기서 Mono.error를 반환하도록 수정할 수도 있음,
+                // 필요에 따라 사용자 정의 예외를 던질 수도 있음.
+                // Mono.error(new CustomRedisUnavailableException("Failed to blacklist token", e))와 같은 방식으로 처리 가능
+                // 또는 호출자가 onError를 처리하도록 할 수도 있음.
+                throw e; // 현재는 예외를 던져 호출자가 처리하도록 함
             }
         });
     }
