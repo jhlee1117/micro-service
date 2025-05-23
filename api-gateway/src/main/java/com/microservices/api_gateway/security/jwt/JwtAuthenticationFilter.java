@@ -17,11 +17,11 @@ import reactor.core.publisher.Mono;
 @Component
 public class JwtAuthenticationFilter implements WebFilter {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenValidator jwtTokenValidator;
     private final RedisService redisService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, RedisService redisService) {
-        this.jwtTokenProvider = jwtTokenProvider;
+    public JwtAuthenticationFilter(JwtTokenValidator jwtTokenValidator, RedisService redisService) {
+        this.jwtTokenValidator = jwtTokenValidator;
         this.redisService = redisService;
     }
 
@@ -29,7 +29,7 @@ public class JwtAuthenticationFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String token = extractToken(exchange.getRequest());
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        if (token != null && jwtTokenValidator.validateToken(token)) {
             
             return redisService.isBlacklisted(token)
                 .flatMap(isBlackListToken -> {
@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter implements WebFilter {
                         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                         return exchange.getResponse().setComplete();
                     } else {
-                        Authentication auth = jwtTokenProvider.getAuthentication(token);
+                        Authentication auth = jwtTokenValidator.getAuthentication(token);
                         return chain.filter(exchange)
                                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
                     }
@@ -45,8 +45,13 @@ public class JwtAuthenticationFilter implements WebFilter {
         }
 
         // If the token is not valid or not present, continue the filter chain
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        return exchange.getResponse().setComplete();
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+
+        return chain.filter(exchange);
     }
 
     private String extractToken(ServerHttpRequest request) {

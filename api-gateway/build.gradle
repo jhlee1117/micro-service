@@ -15,6 +15,9 @@ java {
 
 repositories {
 	mavenCentral()
+	flatDir {
+		dirs '../common-libs'
+	}
 }
 
 ext {
@@ -34,6 +37,7 @@ dependencies {
 	implementation 'org.apache.commons:commons-pool2:2.12.0'
 	implementation 'io.jsonwebtoken:jjwt:0.12.6'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:4.2.0'
+	implementation name: 'common-jwt-1.0.0'
 }
 
 dependencyManagement {
