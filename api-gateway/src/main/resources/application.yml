@@ -25,3 +25,8 @@ jwt:
   access-token-expire-time: 3600
   refresh-token-expire-time: 604800
   secret-key-algorithm: HS256
+
+frontend:
+  url: http://localhost:3000
+  login-url: /login
+  logout-url: /logout

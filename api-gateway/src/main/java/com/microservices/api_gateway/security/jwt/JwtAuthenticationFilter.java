@@ -1,5 +1,9 @@
 package com.microservices.api_gateway.security.jwt;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -20,6 +24,12 @@ public class JwtAuthenticationFilter implements WebFilter {
     private final JwtTokenValidator jwtTokenValidator;
     private final RedisService redisService;
 
+    @Value("${frontend.url:}")
+    private String frontendUrl;
+
+    @Value("${frontend.login-path:}")
+    private String loginPath;
+
     public JwtAuthenticationFilter(JwtTokenValidator jwtTokenValidator, RedisService redisService) {
         this.jwtTokenValidator = jwtTokenValidator;
         this.redisService = redisService;
@@ -29,13 +39,17 @@ public class JwtAuthenticationFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String token = extractToken(exchange.getRequest());
 
+        // 공개 API 경로 체크 (인증 필요 없는 경로)
+        if (isPublicEndpoint(exchange.getRequest().getPath().toString())) {
+            return chain.filter(exchange);
+        }
+
         if (token != null && jwtTokenValidator.validateToken(token)) {
             
             return redisService.isBlacklisted(token)
                 .flatMap(isBlackListToken -> {
                     if (Boolean.TRUE.equals(isBlackListToken)) {
-                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                        return exchange.getResponse().setComplete();
+                        return handleUnauthenticated(exchange);
                     } else {
                         Authentication auth = jwtTokenValidator.getAuthentication(token);
                         return chain.filter(exchange)
@@ -44,14 +58,8 @@ public class JwtAuthenticationFilter implements WebFilter {
                 });
         }
 
-        // If the token is not valid or not present, continue the filter chain
-        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
-
-        return chain.filter(exchange);
+        // 인증 실패 처리
+        return handleUnauthenticated(exchange);
     }
 
     private String extractToken(ServerHttpRequest request) {
@@ -60,6 +68,35 @@ public class JwtAuthenticationFilter implements WebFilter {
             return token.substring(7);
         }
         return null;
+    }
+
+    private Mono<Void> handleUnauthenticated(ServerWebExchange exchange) {
+        // API 요청인지 웹 페이지 요청인지 확인
+        String acceptHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.ACCEPT);
+        boolean isApiRequest = acceptHeader != null && 
+                                (acceptHeader.contains("application/json") || 
+                                 acceptHeader.contains("application/xml"));
+    
+        if (isApiRequest) {
+            // API 요청이면 401 반환
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        } else {
+            String originalUrl = exchange.getRequest().getURI().toString();
+            String encodedUrl = URLEncoder.encode(originalUrl, StandardCharsets.UTF_8);
+            // 웹 요청이면 로그인 페이지로 리다이렉트
+            exchange.getResponse().setStatusCode(HttpStatus.FOUND); // 302 Found
+            // exchange.getResponse().getHeaders().add(HttpHeaders.LOCATION, "/auth/login");
+            exchange.getResponse().getHeaders().add(HttpHeaders.LOCATION, 
+                                         frontendUrl + loginPath + "?redirect=" + encodedUrl);
+            return exchange.getResponse().setComplete();
+        }
+    }
+
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/auth/login") || 
+               path.startsWith("/auth/register") || 
+               path.startsWith("/public");
     }
 
 }
