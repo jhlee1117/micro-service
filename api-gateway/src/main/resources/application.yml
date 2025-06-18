@@ -28,5 +28,4 @@ jwt:
 
 frontend:
   url: http://localhost:3000
-  login-url: /login
-  logout-url: /logout
+  login-path: /auth/sign-in
