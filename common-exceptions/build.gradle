@@ -24,12 +24,9 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-    implementation 'io.jsonwebtoken:jjwt:0.12.6'
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation 'org.slf4j:slf4j-api:2.0.16'
 }
 
-// JAR 파일 생성 설정 (ShadowJar 제거)
+// JAR 파일 생성 설정
 jar {
     enabled = true
     archiveClassifier = ''

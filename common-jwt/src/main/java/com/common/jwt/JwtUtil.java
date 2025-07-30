@@ -1,6 +1,7 @@
 package com.common.jwt;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -11,14 +12,21 @@ import io.jsonwebtoken.security.Keys;
 public class JwtUtil {
 
     public static SecretKey generateSecretKey(String secretKeyString) {
-        return Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+        try {
+            // Base64 디코딩 시도
+            byte[] keyBytes = Base64.getDecoder().decode(secretKeyString);
+            return Keys.hmacShaKeyFor(keyBytes);
+        } catch (IllegalArgumentException e) {
+            // Base64 디코딩 실패 시 원본 문자열 사용
+            return Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public static String generateAccessToken(String username, String tenantId, SecretKey actualSecretKey,
             long accessTokenExpirationTime) {
         Date now = new Date();
         // accessTokenExpirationTime에 설정된 만료 시간을 사용하여 만료 날짜를 계산합니다.
-        Date expiryDate = new Date(now.getTime() + (accessTokenExpirationTime * 1000)); 
+        Date expiryDate = new Date(now.getTime() + accessTokenExpirationTime); 
 
         return Jwts.builder()
                 .subject(username)
@@ -26,6 +34,22 @@ public class JwtUtil {
                 .expiration(expiryDate) // 토큰 만료 시간
                 .claim("tenantId", tenantId)
                 .signWith(actualSecretKey) // SecretKey를 사용하여 서명
+                .compact();
+    }
+
+    public static String generateRefreshToken(String username, String tenantId, SecretKey actualSecretKey,
+            long refreshTokenExpirationTime) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpirationTime);
+
+        return Jwts.builder()
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .claim("tenantId", tenantId)
+                .claim("type", "refresh") // refresh token임을 명시
+                .claim("version", "1.0") // 토큰 버전 관리 (선택사항)
+                .signWith(actualSecretKey)
                 .compact();
     }
 
