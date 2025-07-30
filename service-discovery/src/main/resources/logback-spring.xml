@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 로그 디렉토리 설정 (환경 변수 또는 기본값 사용) -->
+    <springProfile name="!docker">
+        <property name="LOG_PATH" value="./logs"/>
+    </springProfile>
+    
+    <springProfile name="docker">
+        <property name="LOG_PATH" value="/tmp/logs"/>
+    </springProfile>
+
+    <!-- 콘솔 출력 설정 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 출력 설정 (로컬 환경에서만 사용) -->
+    <springProfile name="!docker">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_PATH}/service-discovery.log</file>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+            
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <!-- 파일명 패턴: service-discovery-YYYYMMDD-HH-순서.log (12시간 단위) -->
+                <fileNamePattern>${LOG_PATH}/service-discovery-%d{yyyyMMdd-HH}-%i.log</fileNamePattern>
+                <!-- 최대 파일 크기 10MB -->
+                <maxFileSize>10MB</maxFileSize>
+                <!-- 최대 보관 파일 수 (30일) -->
+                <maxHistory>30</maxHistory>
+                <!-- 총 로그 파일 크기 제한 -->
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+    </springProfile>
+
+    <!-- 루트 로거 설정 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <springProfile name="!docker">
+            <appender-ref ref="FILE" />
+        </springProfile>
+    </root>
+
+    <!-- Spring Cloud Eureka 관련 로그 레벨 설정 -->
+    <logger name="com.netflix.eureka" level="INFO" />
+    <logger name="com.netflix.discovery" level="INFO" />
+    
+    <!-- Spring Framework 관련 로그 레벨 설정 -->
+    <logger name="org.springframework" level="INFO" />
+    <logger name="org.springframework.cloud" level="INFO" />
+    
+    <!-- 애플리케이션 로그 레벨 설정 -->
+    <logger name="com.microservices.service_discovery" level="INFO" />
+</configuration> 
