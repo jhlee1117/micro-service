@@ -16,6 +16,7 @@ public class RedisService {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisService.class); // 로거 생성
     private final RedisTemplate<String, Object> redisTemplate;
+    private static final String ACCESS_TOKEN_BLACKLIST_KEY_PREFIX = "blacklist:";
 
     public RedisService(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -24,7 +25,7 @@ public class RedisService {
     public Mono<Boolean> isBlacklisted(String token) {
         return Mono.fromCallable(() -> {
             try {
-                return redisTemplate.hasKey("blacklist:" + token); // Redis에서 키 존재 여부 확인
+                return redisTemplate.hasKey(ACCESS_TOKEN_BLACKLIST_KEY_PREFIX + token); // Redis에서 키 존재 여부 확인
             } catch (RedisConnectionFailureException | QueryTimeoutException e) {
                 logger.error("Redis connection error while checking blacklist for token: {}", token, e);
                 return false; // Redis 연결 실패 시 false 반환 (서비스 지속성을 위해)
@@ -37,14 +38,11 @@ public class RedisService {
     public Mono<Void> blacklistToken(String token, long expirationTime) {
         return Mono.fromRunnable(() -> {
             try {
-                redisTemplate.opsForValue().set(token, "blacklisted", Duration.ofMillis(expirationTime));
+                // 키를 일관성 있게 설정
+                redisTemplate.opsForValue().set(ACCESS_TOKEN_BLACKLIST_KEY_PREFIX + token, "blacklisted", Duration.ofMillis(expirationTime));
             } catch (RedisConnectionFailureException | QueryTimeoutException e) {
                 logger.error("Redis connection error while blacklisting token: {}", token, e);
-                // 여기서 Mono.error를 반환하도록 수정할 수도 있음,
-                // 필요에 따라 사용자 정의 예외를 던질 수도 있음.
-                // Mono.error(new CustomRedisUnavailableException("Failed to blacklist token", e))와 같은 방식으로 처리 가능
-                // 또는 호출자가 onError를 처리하도록 할 수도 있음.
-                throw e; // 현재는 예외를 던져 호출자가 처리하도록 함
+                throw e;
             }
         });
     }

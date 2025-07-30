@@ -2,32 +2,27 @@ package com.microservices.api_gateway.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.authentication.RedirectServerAuthenticationEntryPoint;
-
-import com.microservices.api_gateway.security.jwt.JwtAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         
-        // RedirectServerAuthenticationEntryPoint is used to redirect unauthenticated requests to the login page.
-        // In a real-world application, you might want to handle this differently, such as returning a 401 Unauthorized status.
-        // However, for the purpose of this example, we will use a redirect to a login page.
-        RedirectServerAuthenticationEntryPoint authEntryPoint = 
-            new RedirectServerAuthenticationEntryPoint("/auth/login");
-
-	    return http.csrf(csrfCustomizer -> csrfCustomizer.disable())
+        return http.csrf(csrfCustomizer -> csrfCustomizer.disable())
+            .cors(corsCustomizer -> corsCustomizer.disable()) // CORS 비활성화 (필요시 별도 설정)
             .exceptionHandling(exceptionHandlingCustomizer -> 
-                exceptionHandlingCustomizer.authenticationEntryPoint(authEntryPoint))
-            .authorizeExchange(exchanges -> exchanges.pathMatchers("/auth/login", "/auth/register").permitAll()
-            .anyExchange().authenticated()
+                exceptionHandlingCustomizer.authenticationEntryPoint((exchange, ex) -> {
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                }))
+            .authorizeExchange(exchanges -> exchanges
+                .pathMatchers("/auth/login", "/auth/register", "/auth/hello", "/auth/logout").permitAll()
+                .anyExchange().authenticated()
             )
-            .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
             .build(); 
         
     }

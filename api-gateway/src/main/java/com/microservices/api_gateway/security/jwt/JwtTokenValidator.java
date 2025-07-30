@@ -17,6 +17,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import java.util.Base64;
 
 @Component
 public class JwtTokenValidator {
@@ -31,11 +32,17 @@ public class JwtTokenValidator {
     @Value("${jwt.access-token-expire-time}") // application.yml에 설정된 만료 시간
     private long accessTokenExpirationTime; // 액세스 토큰 만료 시간 (단위: 초)
 
+    @Value("${jwt.refresh-token-expire-time}")
+    private long refreshTokenExpirationTime;
+
     JwtTokenProvider jwtTokenProvider;
 
     @PostConstruct
     public void init() {
-        jwtTokenProvider = new JwtTokenProvider(secretKeyString, accessTokenExpirationTime);
+        logger.info("API Gateway - secretKeyString: '{}'", secretKeyString);
+        logger.info("API Gateway - secretKeyString 길이: {}", secretKeyString.length());
+        
+        jwtTokenProvider = new JwtTokenProvider(secretKeyString, accessTokenExpirationTime, refreshTokenExpirationTime);
     }    
 
     public Authentication getAuthentication(String token) {
@@ -54,18 +61,29 @@ public class JwtTokenValidator {
     }
 
     public static void main(String[] args) {
-
-        Date now = new Date();
-        // accessTokenExpirationTime에 설정된 만료 시간을 사용하여 만료 날짜를 계산합니다.
-        Date expiryDate = new Date(now.getTime() + (3600 * 1000)); 
-
-        String token =  Jwts.builder()
-                .subject("testuser")
-                .issuedAt(now) // 토큰 발급 시간
-                .expiration(expiryDate) // 토큰 만료 시간
-                .claim("tenantId", "tenant1")
-                .signWith(Keys.hmacShaKeyFor("lFMCnn04hFUty4RnSNjDDfQ8eYBySWTWis5AmbGiv6U=".getBytes(StandardCharsets.UTF_8)))
-                .compact();
+        // 테스트용 시크릿 키 (실제 환경에서는 Config Server에서 가져와야 함)
+        String testSecretKey = "lFMCnn04hFUty4RnSNjDDfQ8eYBySWTWis5AmbGiv6U=";
+        
+        // JwtTokenProvider 생성
+        JwtTokenProvider provider = new JwtTokenProvider(testSecretKey, 3600000, 259200000);
+        System.out.println(provider.getActualSecretKey().getAlgorithm());
+        // 토큰 생성
+        String token = provider.generateAccessToken("admin", "1");
         System.out.println("Generated Token: " + token);
+        
+        // 토큰 검증
+        boolean isValid = provider.validateToken(token);
+        System.out.println("Token validation result: " + isValid);
+        
+        // Claims 추출
+        try {
+            String username = provider.getUsername(token);
+            String tenantId = provider.getTenantId(token);
+            System.out.println("Username: " + username);
+            System.out.println("TenantId: " + tenantId);
+        } catch (Exception e) {
+            System.err.println("Error extracting claims: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

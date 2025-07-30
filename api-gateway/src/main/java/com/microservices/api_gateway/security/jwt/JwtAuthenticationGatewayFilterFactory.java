@@ -4,6 +4,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -11,15 +13,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
 
 import com.microservices.api_gateway.security.redis.RedisService;
 
 import reactor.core.publisher.Mono;
 
 @Component
-public class JwtAuthenticationFilter implements WebFilter {
+public class JwtAuthenticationGatewayFilterFactory extends AbstractGatewayFilterFactory<JwtAuthenticationGatewayFilterFactory.Config> {
 
     private final JwtTokenValidator jwtTokenValidator;
     private final RedisService redisService;
@@ -30,36 +30,39 @@ public class JwtAuthenticationFilter implements WebFilter {
     @Value("${frontend.login-path:}")
     private String loginPath;
 
-    public JwtAuthenticationFilter(JwtTokenValidator jwtTokenValidator, RedisService redisService) {
+    public JwtAuthenticationGatewayFilterFactory(JwtTokenValidator jwtTokenValidator, RedisService redisService) {
+        super(Config.class);
         this.jwtTokenValidator = jwtTokenValidator;
         this.redisService = redisService;
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        String token = extractToken(exchange.getRequest());
+    public GatewayFilter apply(Config config) {
+        return (exchange, chain) -> {
+            String token = extractToken(exchange.getRequest());
 
-        // 공개 API 경로 체크 (인증 필요 없는 경로)
-        if (isPublicEndpoint(exchange.getRequest().getPath().toString())) {
-            return chain.filter(exchange);
-        }
+            // 공개 API 경로 체크 (인증 필요 없는 경로)
+            if (isPublicEndpoint(exchange.getRequest().getPath().toString())) {
+                return chain.filter(exchange);
+            }
 
-        if (token != null && jwtTokenValidator.validateToken(token)) {
-            
-            return redisService.isBlacklisted(token)
-                .flatMap(isBlackListToken -> {
-                    if (Boolean.TRUE.equals(isBlackListToken)) {
-                        return handleUnauthenticated(exchange);
-                    } else {
-                        Authentication auth = jwtTokenValidator.getAuthentication(token);
-                        return chain.filter(exchange)
-                                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
-                    }
-                });
-        }
+            if (token != null && jwtTokenValidator.validateToken(token)) {
+                
+                return redisService.isBlacklisted(token)
+                    .flatMap(isBlackListToken -> {
+                        if (Boolean.TRUE.equals(isBlackListToken)) {
+                            return handleUnauthenticated(exchange);
+                        } else {
+                            Authentication auth = jwtTokenValidator.getAuthentication(token);
+                            return chain.filter(exchange)
+                                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
+                        }
+                    });
+            }
 
-        // 인증 실패 처리
-        return handleUnauthenticated(exchange);
+            // 인증 실패 처리
+            return handleUnauthenticated(exchange);
+        };
     }
 
     private String extractToken(ServerHttpRequest request) {
@@ -86,7 +89,6 @@ public class JwtAuthenticationFilter implements WebFilter {
             String encodedUrl = URLEncoder.encode(originalUrl, StandardCharsets.UTF_8);
             // 웹 요청이면 로그인 페이지로 리다이렉트
             exchange.getResponse().setStatusCode(HttpStatus.FOUND); // 302 Found
-            // exchange.getResponse().getHeaders().add(HttpHeaders.LOCATION, "/auth/login");
             exchange.getResponse().getHeaders().add(HttpHeaders.LOCATION, 
                                          frontendUrl + loginPath + "?redirect=" + encodedUrl);
             return exchange.getResponse().setComplete();
@@ -96,7 +98,11 @@ public class JwtAuthenticationFilter implements WebFilter {
     private boolean isPublicEndpoint(String path) {
         return path.startsWith("/auth/login") || 
                path.startsWith("/auth/register") || 
+               path.startsWith("/auth/hello") || 
                path.startsWith("/public");
     }
 
+    public static class Config {
+        // 필요한 설정이 있다면 여기에 추가
+    }
 }

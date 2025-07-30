@@ -1,6 +1,8 @@
 spring:
   application:
     name: api-gateway
+  config:
+    import: optional:configserver:http://localhost:8888
   cloud:
     gateway:
       routes:
@@ -8,6 +10,8 @@ spring:
         uri: lb://auth-service
         predicates:
           - Path=/auth/**
+        filters:
+          - JwtAuthentication
   data:
     redis:
       host: localhost
@@ -20,12 +24,20 @@ spring:
           max-wait: -1
           min-idle: 0
 
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
 jwt:
-  secret: lFMCnn04hFUty4RnSNjDDfQ8eYBySWTWis5AmbGiv6U=
-  access-token-expire-time: 3600
-  refresh-token-expire-time: 604800
+  secret: override-from-config-server
+  access-token-expire-time: 3600000
+  refresh-token-expire-time: 604800000
   secret-key-algorithm: HS256
 
 frontend:
   url: http://localhost:3000
-  login-path: /auth/sign-in
+  login-path: /auth/login
