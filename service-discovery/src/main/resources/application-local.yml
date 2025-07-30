@@ -1,0 +1,6 @@
+spring:
+  profiles:
+    active: local
+
+# 로컬 개발 환경에서는 docker 프로파일을 비활성화
+# logback-spring.xml에서 !docker 프로파일이 활성화되어 ./logs 경로 사용 
