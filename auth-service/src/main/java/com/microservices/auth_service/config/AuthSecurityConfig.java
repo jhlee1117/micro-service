@@ -15,9 +15,15 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import com.common.jwt.JwtTokenProvider;
+import com.common.jwt.config.JwtFilterConfigurer;
+import com.common.jwt.filter.ServletJwtAuthenticationFilter;
+import com.microservices.auth_service.security.redis.AuthRedisService;
 
 @Configuration
 @EnableWebSecurity
@@ -25,24 +31,35 @@ public class AuthSecurityConfig {
 
     @Autowired
     private UserDetailsService userDetailsService;
+    
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+    
+    @Autowired
+    private AuthRedisService authRedisService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        
+        // 공통 JWT 필터 생성
+        ServletJwtAuthenticationFilter jwtAuthenticationFilter = 
+            JwtFilterConfigurer.createServletFilter(jwtTokenProvider, authRedisService);
+        
         return http.csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.disable()) // CORS ��Ȱ��ȭ
+                .cors(cors -> cors.disable()) // CORS 비활성화
                 .sessionManagement(session -> 
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT ���� ������
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT 기반 무상태
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/auth/**").permitAll() // 모든 auth 경로 허용
+                    .requestMatchers("/auth/login", "/auth/register", "/auth/refresh", "/auth/hello").permitAll() // 인증 관련 경로 허용
                     .requestMatchers("/actuator/**", "/h2-console/**").permitAll() // Health check 등
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger UI
                     .requestMatchers("/v3/api-docs/**", "/swagger-resources/**").permitAll() // Swagger API docs
-                    .anyRequest().authenticated() // 나머지는 인증 필요
+                    .anyRequest().authenticated() // 나머지는 인증 필요 (Zero Trust)
                 )
                 .headers(headers -> headers
-                    // ⺻������ X-Frame-Options ����
+                    // 기본으로는 X-Frame-Options 설정
                     .frameOptions(frame -> frame.sameOrigin())
-                    // Ư�� ��ο� ���ؼ��� X-Frame-Options ����
+                    // 특정 경로에 대해서는 X-Frame-Options 해제
                     .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
                         new AntPathRequestMatcher("/actuator/**"),
                         new StaticHeadersWriter("X-Frame-Options", "")
@@ -53,15 +70,12 @@ public class AuthSecurityConfig {
                     ))
                 )
                 .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-            )
-            .build();
+                    .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                )
+                // JWT 필터를 UsernamePasswordAuthenticationFilter 이전에 추가
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
-
-    // public static void main(String[] args) {
-    //     System.out.println(new BCryptPasswordEncoder().encode("admin"));
-    //     System.out.println(new BCryptPasswordEncoder().encode("testuser"));
-    // }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
