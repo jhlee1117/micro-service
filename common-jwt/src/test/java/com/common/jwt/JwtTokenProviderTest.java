@@ -26,14 +26,14 @@ class JwtTokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        jwtTokenProvider = new JwtTokenProvider(TEST_SECRET_KEY, TEST_EXPIRATION_TIME);
+        jwtTokenProvider = new JwtTokenProvider(TEST_SECRET_KEY, TEST_EXPIRATION_TIME, TEST_EXPIRATION_TIME);
     }
 
     @Test
     @DisplayName("생성자 - 유효한 파라미터로 JwtTokenProvider 생성")
     void constructor_WithValidParameters_ShouldCreateInstance() {
         // when
-        JwtTokenProvider provider = new JwtTokenProvider(TEST_SECRET_KEY, TEST_EXPIRATION_TIME);
+        JwtTokenProvider provider = new JwtTokenProvider(TEST_SECRET_KEY, TEST_EXPIRATION_TIME, TEST_EXPIRATION_TIME);
 
         // then
         assertNotNull(provider);
@@ -46,7 +46,7 @@ class JwtTokenProviderTest {
     void constructor_WithNullSecretKey_ShouldThrowException() {
         // when & then
         assertThrows(NullPointerException.class, () -> {
-            new JwtTokenProvider(null, TEST_EXPIRATION_TIME);
+            new JwtTokenProvider(null, TEST_EXPIRATION_TIME, TEST_EXPIRATION_TIME);
         });
     }
 
@@ -55,7 +55,7 @@ class JwtTokenProviderTest {
     void constructor_WithEmptySecretKey_ShouldThrowException() {
         // when & then
         assertThrows(io.jsonwebtoken.security.WeakKeyException.class, () -> {
-            new JwtTokenProvider("", TEST_EXPIRATION_TIME);
+            new JwtTokenProvider("", TEST_EXPIRATION_TIME, TEST_EXPIRATION_TIME);
         });
     }
 
@@ -132,7 +132,7 @@ class JwtTokenProviderTest {
     @DisplayName("validateToken - 잘못된 시크릿 키로 서명된 토큰 검증")
     void validateToken_WithTokenSignedByDifferentKey_ShouldReturnFalse() {
         // given
-        JwtTokenProvider differentProvider = new JwtTokenProvider("differentSecretKeyForJwtTokenGenerationWithMinimum256Bits", TEST_EXPIRATION_TIME);
+        JwtTokenProvider differentProvider = new JwtTokenProvider("differentSecretKeyForJwtTokenGenerationWithMinimum256Bits", TEST_EXPIRATION_TIME, TEST_EXPIRATION_TIME);
         String token = differentProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
 
         // when
@@ -146,7 +146,7 @@ class JwtTokenProviderTest {
     @DisplayName("validateToken - 만료된 토큰 검증")
     void validateToken_WithExpiredToken_ShouldReturnFalse() {
         // given
-        JwtTokenProvider shortExpirationProvider = new JwtTokenProvider(TEST_SECRET_KEY, -3600); // 과거 만료 시간
+        JwtTokenProvider shortExpirationProvider = new JwtTokenProvider(TEST_SECRET_KEY, -3600, TEST_EXPIRATION_TIME); // 과거 만료 시간
         String expiredToken = shortExpirationProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
 
         // when
@@ -318,7 +318,7 @@ class JwtTokenProviderTest {
     @DisplayName("다른 만료 시간으로 생성된 토큰 검증")
     void validateToken_WithDifferentExpirationTime_ShouldWorkCorrectly() {
         // given
-        JwtTokenProvider longExpirationProvider = new JwtTokenProvider(TEST_SECRET_KEY, 7200); // 2시간
+        JwtTokenProvider longExpirationProvider = new JwtTokenProvider(TEST_SECRET_KEY, 7200, TEST_EXPIRATION_TIME); // 2시간
         String token = longExpirationProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
 
         // when
