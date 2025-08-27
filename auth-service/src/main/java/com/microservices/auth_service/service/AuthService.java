@@ -79,7 +79,7 @@ public class AuthService {
             User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
-            if (user.getTenantId() == null || user.getTenantId().toString().isEmpty()) {
+            if (user.getTenant() == null || user.getTenant().getId() == null) {
                 throw new NoTenantException("Tenant ID is required");
             }
 
@@ -87,12 +87,12 @@ public class AuthService {
                 throw new RuntimeException("User is not enabled");
             }
 
-            Tenant tenant = tenantRepository.findById(user.getTenantId())
+            Tenant tenant = tenantRepository.findById(user.getTenant().getId())
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
             
             // JWT 토큰 생성 (실제 사용자 정보 사용)
-            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getTenantId().toString());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername(), user.getTenantId().toString());
+            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getTenant().getId().toString());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername(), user.getTenant().getId().toString());
 
             refreshTokenService.saveRefreshToken(username, refreshToken, jwtTokenProvider.getRefreshTokenExpirationTime());
             
@@ -102,12 +102,12 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(3600)
-                .userId(user.getId().toString())
+                .userId(user.getId())
                 .username(user.getUsername())
                 .name(user.getName())
                 .tenantName(tenant.getName())
                 .email(user.getEmail())
-                .tenantId(user.getTenantId().toString())
+                .tenantId(user.getTenant().getId().toString())
                 .roles(user.getRoleNames().stream().toList())
                 // .message("Login successful")
                 .success(true)
@@ -154,7 +154,7 @@ public class AuthService {
             // Rate Limit 리셋 (성공적인 등록 후)
             rateLimitService.resetLoginAttempts(clientIp);
             
-            return RegisterResponse.success(user.getId().toString(), user.getUsername());
+            return RegisterResponse.success(user.getId(), user.getUsername());
             
         } catch (Exception e) {
             // 등록 실패 시 로그 기록
@@ -197,13 +197,13 @@ public class AuthService {
                 .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn(3600)
-                .userId(user.getId().toString())
+                .userId(user.getId())
                 .username(user.getUsername())
-                .tenantId(user.getTenantId().toString())
+                .tenantId(user.getTenant() != null && user.getTenant().getId() != null ? user.getTenant().getId().toString() : tenantId)
                 .roles(user.getRoleNames().stream().toList())
                 .message("Token refreshed successfully")
                 .success(true)
-                .build();
+            .build();
         } catch (Exception e) {
             log.error("Token refresh failed: {}", e.getMessage());
             return LoginResponse.failure("Token refresh failed: " + e.getMessage());

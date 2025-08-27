@@ -22,7 +22,7 @@ public class LoginResponse {
 
     private String refreshToken; // 선택: 리프레시 토큰 전략을 쓰는 경우
 
-    private String userId;
+    private Long userId;
     private String username;
     // private String userNameKr;
 
@@ -36,6 +36,7 @@ public class LoginResponse {
     
     private String message;
     private boolean success;
+    private List<MenuDto> menuList;
 
     // 정적 팩토리 메서드
     public static LoginResponse success(Optional<String> token, String message) {

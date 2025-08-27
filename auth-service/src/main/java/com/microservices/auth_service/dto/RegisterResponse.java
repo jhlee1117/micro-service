@@ -10,10 +10,10 @@ import lombok.Setter;
 public class RegisterResponse {
     private boolean success;
     private String message;
-    private String userId;
+    private Long userId;
     private String username;
     
-    public static RegisterResponse success(String userId, String username) {
+    public static RegisterResponse success(Long userId, String username) {
         return RegisterResponse.builder()
             .success(true)
             .message("User registered successfully")

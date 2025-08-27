@@ -26,8 +26,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "tenant_id")
-    private Long tenantId;
     
     @Column(unique = true, nullable = false)
     private String username;
@@ -42,6 +40,7 @@ public class User {
     private String password;
         
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private boolean enabled = true;
     
     @Column(name = "created_at")
@@ -51,8 +50,13 @@ public class User {
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    private Tenant tenant;
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Builder.Default
     private Set<UserRole> userRoles = new HashSet<>();
     
     public Set<String> getRoleNames() {
@@ -65,7 +69,6 @@ public class User {
     
     public void addRole(Role role, User grantedBy) {
         UserRole userRole = UserRole.builder()
-                .id(new UserRoleId(this.id, role.getId()))
                 .user(this)
                 .role(role)
                 .grantedBy(grantedBy)

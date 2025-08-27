@@ -1,5 +1,10 @@
 package com.microservices.auth_service.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,27 +22,24 @@ import com.common.exceptions.NoTenantException;
 import com.common.exceptions.TooManyAttemptsException;
 import com.microservices.auth_service.dto.LoginRequest;
 import com.microservices.auth_service.dto.LoginResponse;
+import com.microservices.auth_service.dto.MenuDto;
 import com.microservices.auth_service.dto.RegisterRequest;
 import com.microservices.auth_service.dto.RegisterResponse;
 import com.microservices.auth_service.service.AuthService;
-import static com.microservices.auth_service.utils.WebUtils.getClientIp;
+import com.microservices.auth_service.service.MenuService;
 import com.microservices.auth_service.service.RateLimitService;
 import com.microservices.auth_service.utils.CookieUtils;
+import static com.microservices.auth_service.utils.WebUtils.getClientIp;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.util.Optional;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/auth")
@@ -49,6 +51,9 @@ public class AuthController {
 
     @Autowired
     private RateLimitService rateLimitService;
+
+    @Autowired
+    private MenuService menuService;
 
     @Autowired
     private CookieUtils cookieUtils;
@@ -104,6 +109,9 @@ public class AuthController {
                 response.setRefreshToken(null);
 
                 log.info("Refresh token cookie set for user: {}", request.getUsername());
+
+                List<MenuDto> menuList = menuService.getMenuListByUserInfo(response.getUserId());
+                response.setMenuList(menuList);
             }
             return ResponseEntity.ok(response);
             
@@ -134,6 +142,8 @@ public class AuthController {
 
             LoginResponse response = authService.refreshAccessToken(refreshToken);
             if (response.isSuccess()) {
+                cookieUtils.setRefreshTokenCookie(httpResponse, response.getRefreshToken(), 2592000); // 30일
+                response.setRefreshToken(null);
                 log.info("Token refreshed successfully for user: {}", response.getUsername());
                 return ResponseEntity.ok(response);
             } else {
