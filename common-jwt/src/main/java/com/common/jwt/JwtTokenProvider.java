@@ -6,7 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
+
+import java.time.Instant;
+import java.util.Date;
 
 public class JwtTokenProvider {
 
@@ -39,23 +46,8 @@ public class JwtTokenProvider {
         return JwtUtil.generateRefreshToken(username, tenantId, actualSecretKey, refreshTokenExpirationTime);
     }
 
-    // ��ū�� ��ȿ���� �˻��ϴ� �޼���
     public boolean validateToken(String token) { 
-        try {
-            log.debug("Validating token with secret key algorithm: {}", actualSecretKey.getAlgorithm());
-            log.debug("Token to validate: {}", token);
-            
-            Jwts.parser()
-                .verifyWith(actualSecretKey)
-                .build()
-                .parseSignedClaims(token);
-                
-            return true; // ��ȿ�� ��ū
-        } catch (Exception e) {
-            log.error("Invalid token: {}", e.getMessage());
-            log.error("Token validation failed with exception: ", e);
-            return false;
-        }
+        return validateTokenWithResult(token).isValid();
     }
 
     public boolean validateRefreshToken(String token) {
@@ -110,4 +102,56 @@ public class JwtTokenProvider {
         return refreshTokenExpirationTime;
     }
 
+    public TokenValidationResult validateTokenWithResult(String token) {
+        try {
+            log.info("=== 토큰 검증 시작 ===");
+            log.info("검증 시점: {}", new Date());
+            log.info("검증할 토큰: {}", token);
+            
+            // 토큰 내용 미리 확인
+            try {
+                Claims claims = getClaims(token);
+                Date expiration = claims.getExpiration();
+                Date now = new Date();
+                log.info("토큰 만료 시간: {}", expiration);
+                log.info("현재 시간: {}", now);
+                log.info("만료 여부: {}", now.after(expiration));
+            } catch (Exception e) {
+                log.warn("토큰 내용 미리 확인 실패: {}", e.getMessage());
+            }
+            
+            Jwts.parser()
+                .verifyWith(actualSecretKey)
+                .build()
+                .parseSignedClaims(token);
+                
+            log.info("토큰 검증 성공 - 유효함");
+            return TokenValidationResult.valid(); 
+        } catch (ExpiredJwtException e) {
+            log.warn("토큰 만료됨: {}", e.getMessage());
+            return TokenValidationResult.expired(e.getMessage());
+        } catch (Exception e) {
+            log.error("토큰 검증 실패: {}", e.getMessage());
+            return TokenValidationResult.invalid("Invalid token");
+        }
+    }
+
+    public void debugToken(String token) {
+        try {
+            Claims claims = getClaims(token);
+            Date expiration = claims.getExpiration();
+            Date issuedAt = claims.getIssuedAt();
+            Date now = new Date();
+            
+            log.info("=== JWT 토큰 디버그 정보 ===");
+            log.info("현재 시간: {}", now);
+            log.info("토큰 발급 시간: {}", issuedAt);
+            log.info("토큰 만료 시간: {}", expiration);
+            log.info("현재 시간과 만료 시간 차이: {} ms", expiration.getTime() - now.getTime());
+            log.info("토큰이 만료되었는가: {}", now.after(expiration));
+            log.info("===============================");
+        } catch (Exception e) {
+            log.error("토큰 디버그 실패: {}", e.getMessage());
+        }
+    }
 }
