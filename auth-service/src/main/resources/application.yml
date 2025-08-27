@@ -18,7 +18,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  h2:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # EntityManager 충돌 방지를 위한 설정
+        entitymanager_factory_interface: jakarta.persistence.EntityManagerFactory
+        # 추가 안정성 설정
+        jdbc:
+          time_zone: UTC
+        connection:
+          provider_disables_autocommit: true
+        # 디버깅 모드에서 발생하는 문제 해결
+        generate_statistics: false
+        use_sql_comments: true
     console:
       enabled: true
   data:
