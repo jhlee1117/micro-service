@@ -7,3 +7,10 @@ build
 .vscode
 # Ignore IntelliJ IDEA project files
 .idea
+
+# Ignore Eclipse bin directory (compiled classes)
+bin/
+
+# Ignore QueryDSL generated files in non-standard locations
+**/bin/generated-sources/
+**/bin/default/
