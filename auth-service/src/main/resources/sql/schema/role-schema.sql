@@ -10,11 +10,12 @@ CREATE TABLE roles (
 
 -- 사용자-역할 매핑
 CREATE TABLE appuser_roles (
-    user_id BIGINT,
-    role_id BIGINT,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
     granted_by BIGINT, -- 권한을 부여한 사용자
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, role_id),
+    UNIQUE(user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES appuser(id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (granted_by) REFERENCES appuser(id)
