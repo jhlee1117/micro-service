@@ -43,6 +43,9 @@ public class RedisService {
             } catch (RedisConnectionFailureException | QueryTimeoutException e) {
                 logger.error("Redis connection error while blacklisting token: {}", token, e);
                 throw e;
+            } catch (Exception e) {
+                logger.error("Redis error while blacklisting token: {}", token, e);
+                throw e;
             }
         });
     }
