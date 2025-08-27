@@ -9,9 +9,9 @@ spring:
       - id: auth-service
         uri: lb://auth-service
         predicates:
-          - Path=/auth/**
-        filters:
-          - JwtAuthentication
+          - Path=/auth/**, /user/**, /secure/**
+        # filters:
+        #   - JwtAuthentication
   data:
     redis:
       host: localhost
@@ -37,6 +37,13 @@ jwt:
   access-token-expire-time: 3600000
   refresh-token-expire-time: 604800000
   secret-key-algorithm: HS256
+
+# 보호가 필요한 API 경로 설정
+# protected-paths:
+#   - /user/**
+#   - /admin/**
+#   - /api/secure/**
+#   - /internal/**
 
 frontend:
   url: http://localhost:3000
