@@ -320,4 +320,26 @@ public class UserService {
             return ResponseEntity.badRequest().body("사용자 업데이트 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
+    public ResponseEntity<String> deleteUser(String username) {
+        try {
+            Optional<User> existingUserOpt = userRepository.findByUsername(username);
+            if (existingUserOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("User not found: " + username);
+            }
+
+            User existingUser = existingUserOpt.get();
+            userRepository.deleteById(existingUser.getId());
+
+            return ResponseEntity.ok().build();
+
+        } catch (IllegalArgumentException e) {
+            logger.warn("Validation error deleting user: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error updating user: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("사용자 삭제 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
 }

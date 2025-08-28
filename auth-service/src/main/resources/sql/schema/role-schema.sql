@@ -25,8 +25,8 @@ CREATE TABLE appuser_roles (
 INSERT INTO roles (name, description, is_system_role) VALUES 
 ('ROLE_SUPER_ADMIN', '슈퍼 관리자', TRUE),
 ('ROLE_ADMIN', '관리자', TRUE),
-('ROLE_USER', '일반 사용자', TRUE),
-('ROLE_VIEWER', '조회 전용', TRUE); 
+('ROLE_USER', '일반 사용자', FALSE),
+('ROLE_VIEWER', '조회 전용', FALSE);
 
 -- INSERT INTO appuser_roles (user_id, role_id, granted_by, created_at) VALUES
 -- ('1')

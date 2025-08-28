@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.microservices.auth_service.domain.entity.Tenant;
+import com.microservices.auth_service.dto.TenantDto;
 
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, Long> {
