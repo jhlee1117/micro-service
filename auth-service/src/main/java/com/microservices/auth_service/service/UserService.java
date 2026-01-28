@@ -338,7 +338,7 @@ public class UserService {
             logger.warn("Validation error deleting user: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
-            logger.error("Error updating user: {}", e.getMessage());
+            logger.error("Error deleting user: {}", e.getMessage());
             return ResponseEntity.badRequest().body("사용자 삭제 중 오류가 발생했습니다: " + e.getMessage());
         }
     }

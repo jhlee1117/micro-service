@@ -14,7 +14,7 @@ public class TenantDto {
     
     private Long id;
     private String name;
-    private String status;
+    private boolean status;
     
     // Tenant 엔티티에서 TenantDto로 변환하는 정적 메서드
     public static TenantDto fromEntity(Tenant tenant) {
@@ -24,7 +24,7 @@ public class TenantDto {
         return new TenantDto(
             tenant.getId(),
             tenant.getName(),
-            tenant.getStatus()
+            tenant.isStatus()
         );
     }
     

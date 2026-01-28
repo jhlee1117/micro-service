@@ -12,7 +12,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         # EntityManager 충돌 방지를 위한 설정
-        entitymanager_factory_interface: jakarta.persistence.EntityManagerFactory
+        # entitymanager_factory_interface: jakarta.persistence.EntityManagerFactory
         # 추가 안정성 설정
         jdbc:
           time_zone: UTC
