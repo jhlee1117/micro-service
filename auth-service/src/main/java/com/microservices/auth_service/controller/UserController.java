@@ -33,18 +33,21 @@ public class UserController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Object> createUser(@RequestBody UserDto userDto) {
-        return userService.createUser(userDto);
+    public ResponseEntity<UserDto> createUser(@RequestBody UserDto userDto) {
+        UserDto created = userService.createUser(userDto);
+        return ResponseEntity.status(201).body(created);
     }
 
     @PutMapping("/{username}")
-    public ResponseEntity<Object> updateUser(@PathVariable("username") String username, @RequestBody UserDto userDto) {        
-        return userService.updateUser(username, userDto);
+    public ResponseEntity<UserDto> updateUser(@PathVariable("username") String username, @RequestBody UserDto userDto) {        
+        UserDto updated = userService.updateUser(username, userDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{username}")
-    public ResponseEntity<String> deleteUser(@PathVariable("username") String username) {
-        return userService.deleteUser(username);
+    public ResponseEntity<Void> deleteUser(@PathVariable("username") String username) {
+        userService.deleteUser(username);
+        return ResponseEntity.noContent().build();
     }
 
 }

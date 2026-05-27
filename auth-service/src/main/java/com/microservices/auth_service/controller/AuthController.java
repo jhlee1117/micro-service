@@ -97,129 +97,70 @@ public class AuthController {
     })  
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        try {
-            // Rate limiting을 위한 IP 추출
-            String clientIp = getClientIp(httpRequest);
-            log.info("Login attempt from IP: {} for user: {}", clientIp, request.getUsername());
-            
-            LoginResponse response = authService.authenticate(request, clientIp);
-            if (response.isSuccess()) {
-                cookieUtils.setRefreshTokenCookie(httpResponse, response.getRefreshToken(), 2592000); // 30일
+        // Rate limiting을 위한 IP 추출
+        String clientIp = getClientIp(httpRequest);
+        log.info("Login attempt from IP: {} for user: {}", clientIp, request.getUsername());
+        
+        LoginResponse response = authService.authenticate(request, clientIp);
+        if (response.isSuccess()) {
+            cookieUtils.setRefreshTokenCookie(httpResponse, response.getRefreshToken(), 2592000); // 30일
+            response.setRefreshToken(null);
+            log.info("Refresh token cookie set for user: {}", request.getUsername());
 
-                response.setRefreshToken(null);
-
-                log.info("Refresh token cookie set for user: {}", request.getUsername());
-
-                List<MenuDto> menuList = menuService.getMenuListByUserInfo(response.getUserId());
-                response.setMenuList(menuList);
-            }
-            return ResponseEntity.ok(response);
-            
-        } catch (AuthenticationException e) {
-            log.warn("Authentication failed for user: {}", request.getUsername());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(LoginResponse.failure("Invalid credentials"));
-        } catch (TooManyAttemptsException e) {
-            log.warn("Too many login attempts from IP: {}", getClientIp(httpRequest));
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(LoginResponse.failure("Too many login attempts. Please try again later."));
-        } catch (NoTenantException e) {
-            log.warn("No tenant ID found for user: {}", request.getUsername());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(LoginResponse.failure("Tenant ID is required"));
+            List<MenuDto> menuList = menuService.getMenuListByUserInfo(response.getUserId());
+            response.setMenuList(menuList);
         }
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "토큰 갱신", description = "Refresh Token을 사용하여 Access Token을 갱신합니다.")
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponse> refreshToken(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        try {
-            String refreshToken = cookieUtils.getRefreshToken(httpRequest);
-            if (refreshToken.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(LoginResponse.failure("No refresh token provided"));
-            }
-
-            LoginResponse response = authService.refreshAccessToken(refreshToken);
-            if (response.isSuccess()) {
-                cookieUtils.setRefreshTokenCookie(httpResponse, response.getRefreshToken(), 2592000); // 30일
-                response.setRefreshToken(null);
-                log.info("Token refreshed successfully for user: {}", response.getUsername());
-                return ResponseEntity.ok(response);
-            } else {
-                log.warn("Failed to refresh token: {}", response.getMessage());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(response);
-            }
-        } catch (Exception e) {
-            log.error("Failed to refresh token", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(LoginResponse.failure("Internal server error: " + e.getMessage()));
+        String refreshToken = cookieUtils.getRefreshToken(httpRequest);
+        if (refreshToken.isEmpty()) {
+            throw new IllegalArgumentException("No refresh token provided");
         }
+
+        LoginResponse response = authService.refreshAccessToken(refreshToken);
+        if (response.isSuccess()) {
+            cookieUtils.setRefreshTokenCookie(httpResponse, response.getRefreshToken(), 2592000); // 30일
+            response.setRefreshToken(null);
+            log.info("Token refreshed successfully for user: {}", response.getUsername());
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "사용자 등록", description = "사용자명과 비밀번호로 등록합니다.")
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         String clientIp = getClientIp(httpRequest);
-
-        try {
-            RegisterResponse response = authService.register(request, clientIp);
-            
-            if (response.isSuccess()) {
-                log.info("User {} registered successfully", request.getUsername());
-                return ResponseEntity.ok(response);
-            } else {
-                log.warn("Failed to register user: {}", response.getMessage());
-                return ResponseEntity.badRequest().body(response);
-            }
-        } catch (Exception e) {
-            log.error("Failed to register user", e);
-            RegisterResponse errorResponse = RegisterResponse.failure("Internal server error: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+        RegisterResponse response = authService.register(request, clientIp);
+        
+        log.info("User {} registered successfully", request.getUsername());
+        return ResponseEntity.status(201).body(response);
     }
 
     @Operation(summary = "사용자 로그아웃", description = "사용자를 로그아웃합니다.")
     @PostMapping("/logout")
     public ResponseEntity<LoginResponse> logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        try {
-            // 1. Refresh Token 쿠키에서 조회
-            String refreshToken = cookieUtils.getRefreshToken(httpRequest);
-            // 2. Refresh Token 저장소에서 무효화
-            authService.clearRefreshToken(refreshToken);
-            // 3. Cookie에서 토큰 제거
-            cookieUtils.clearTokenCookies(httpResponse);
+        // 1. Refresh Token 쿠키에서 조회
+        String refreshToken = cookieUtils.getRefreshToken(httpRequest);
+        // 2. Refresh Token 저장소에서 무효화
+        authService.clearRefreshToken(refreshToken);
+        // 3. Cookie에서 토큰 제거
+        cookieUtils.clearTokenCookies(httpResponse);
 
-            // 로그아웃 시 accessToken을 블랙리스트에 추가하는 로직입니다.
-            // 1. Authorization 헤더에서 accessToken 추출
-            String accessToken = null;
-            String authHeader = httpRequest.getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                accessToken = authHeader.substring(7);
-            }
-
-            // 2. accessToken이 존재하면 블랙리스트에 추가
-            if (accessToken != null && !accessToken.isEmpty()) {
-                try {
-                    authService.blockAccessToken(accessToken);
-                    log.info("Access token 블랙리스트에 추가 완료");
-                } catch (Exception ex) {
-                    log.warn("Access token 블랙리스트 추가 실패: {}", ex.getMessage());
-                }
-            } else {
-                log.info("Authorization 헤더에 accessToken이 없어 블랙리스트 추가를 건너뜀");
-            }
-
-            // 4. 로그아웃 성공 응답  
-            log.info("User logged out successfully");
-            return ResponseEntity.ok(LoginResponse.success(Optional.empty(), "Logout successful"));
-            
-        } catch (Exception e) {
-            log.error("Logout error", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(LoginResponse.failure("Logout failed"));
+        // 로그아웃 시 accessToken을 블랙리스트에 추가하는 로직
+        String authHeader = httpRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String accessToken = authHeader.substring(7);
+            authService.blockAccessToken(accessToken);
+            log.info("Access token 블랙리스트에 추가 완료");
         }
+
+        // 4. 로그아웃 성공 응답  
+        log.info("User logged out successfully");
+        return ResponseEntity.ok(LoginResponse.success(Optional.empty(), "Logout successful"));
     }
 
     @GetMapping("/rate-limit/status")

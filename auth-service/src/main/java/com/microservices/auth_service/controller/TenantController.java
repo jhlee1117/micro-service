@@ -29,18 +29,21 @@ public class TenantController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Object> createTenant(@RequestBody TenantDto tenantDto) {
-        return tenantService.createTenant(tenantDto);
+    public ResponseEntity<TenantDto> createTenant(@RequestBody TenantDto tenantDto) {
+        TenantDto created = tenantService.createTenant(tenantDto);
+        return ResponseEntity.status(201).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Object> updateTenant(@PathVariable("id") Long id, @RequestBody TenantDto tenantDto) {
-        return tenantService.updateTenant(id, tenantDto);
+    public ResponseEntity<TenantDto> updateTenant(@PathVariable("id") Long id, @RequestBody TenantDto tenantDto) {
+        TenantDto updated = tenantService.updateTenant(id, tenantDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteTenant(@PathVariable("id") Long id) {
-        return tenantService.deleteTenant(id);
+    public ResponseEntity<Void> deleteTenant(@PathVariable("id") Long id) {
+        tenantService.deleteTenant(id);
+        return ResponseEntity.noContent().build();
     }
 
 }
