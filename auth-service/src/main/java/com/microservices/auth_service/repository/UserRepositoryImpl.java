@@ -60,6 +60,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             // UserDto 생성
             TenantDto tenantDto = TenantDto.fromEntity(userEntity.getTenant());
             UserDto userDto = new UserDto(
+                userEntity.getId(),
                 userEntity.getUsername(),
                 userEntity.getEmail(),
                 userEntity.getName(),

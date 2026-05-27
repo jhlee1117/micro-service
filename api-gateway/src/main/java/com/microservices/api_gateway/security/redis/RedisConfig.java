@@ -1,5 +1,10 @@
 package com.microservices.api_gateway.security.redis;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +15,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -38,8 +44,6 @@ public class RedisConfig {
     public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration(redisHost,
                 redisPort);
-        // 비밀번호가 있다면 설정:
-        // redisStandaloneConfiguration.setPassword(RedisPassword.of("your-password"));
 
         // Lettuce 풀 설정
         GenericObjectPoolConfig<Object> poolConfig = new GenericObjectPoolConfig<>();
@@ -47,29 +51,37 @@ public class RedisConfig {
         poolConfig.setMaxIdle(maxIdle);
         poolConfig.setMinIdle(minIdle);
         poolConfig.setMaxWait(java.time.Duration.ofMillis(maxWaitMillis));
-        // poolConfig.setTestOnBorrow(true); // 풀에서 커넥션을 가져올 때 유효성 검사 (성능에 영향 줄 수 있음)
-        // poolConfig.setTestOnReturn(true); // 풀에 커넥션을 반환할 때 유효성 검사 (성능에 영향 줄 수 있음)
 
         LettucePoolingClientConfiguration clientConfig = LettucePoolingClientConfiguration.builder()
                 .poolConfig(poolConfig)
-                // .commandTimeout(Duration.ofMillis(timeout)) // application.yml의
-                // spring.data.redis.timeout 사용 가능
                 .build();
 
         return new LettuceConnectionFactory(redisStandaloneConfiguration, clientConfig);
     }
 
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, 
+                                     ObjectMapper.DefaultTyping.NON_FINAL, 
+                                     JsonTypeInfo.As.WRAPPER_ARRAY);
+        
+        return new GenericJackson2JsonRedisSerializer(mapper);
+    }
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory,
+                                                       RedisSerializer<Object> serializer) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        // application.yml의 값으로 생성된 connectionFactory 사용
         template.setConnectionFactory(connectionFactory);
 
         // 직렬화 설정
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setValueSerializer(serializer);
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setHashValueSerializer(serializer);
 
         template.afterPropertiesSet();
         return template;

@@ -10,13 +10,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.common.exceptions.NoTenantException;
 
+import com.common.exceptions.TooManyAttemptsException;
 import com.common.jwt.JwtTokenProvider;
-import com.microservices.auth_service.domain.entity.Tenant;
 import com.microservices.auth_service.domain.entity.User;
 import com.microservices.auth_service.dto.LoginRequest;
 import com.microservices.auth_service.dto.LoginResponse;
 import com.microservices.auth_service.dto.RegisterRequest;
 import com.microservices.auth_service.dto.RegisterResponse;
+import com.microservices.auth_service.dto.RoleDto;
+import com.microservices.auth_service.dto.UserDto;
 import com.microservices.auth_service.repository.TenantRepository;
 import com.microservices.auth_service.repository.UserRepository;
 // import com.microservices.auth_service.exception.UserAlreadyExistsException;
@@ -25,10 +27,6 @@ import com.microservices.auth_service.repository.UserRepository;
 // import com.microservices.auth_service.dto.UserInfo;
 // import com.microservices.auth_service.repository.RoleRepository;
 // import com.microservices.auth_service.domain.entity.Role;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 
 @Service
 public class AuthService {
@@ -45,10 +43,10 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private RateLimitService rateLimitService;
 
     @Autowired
-    private RateLimitService rateLimitService;
+    private UserService userService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -75,41 +73,36 @@ public class AuthService {
             // 인증 성공 시 Rate Limit 리셋
             rateLimitService.resetLoginAttempts(clientIp);
             
-            // 추가 사용자 정보 조회 (JWT 토큰에 포함할 정보)
-            User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+            // 캐시된 DTO 사용 (DB 조회 대신 캐시 바구니 확인)
+            UserDto userDto = userService.getUserDtoByUsername(username);
 
-            if (user.getTenant() == null || user.getTenant().getId() == null) {
+            if (userDto.getTenant() == null || userDto.getTenant().getId() == null) {
                 throw new NoTenantException("Tenant ID is required");
             }
 
-            if (!user.isEnabled()) {
+            if (!userDto.isActive()) {
                 throw new RuntimeException("User is not enabled");
             }
-
-            Tenant tenant = tenantRepository.findById(user.getTenant().getId())
-                .orElseThrow(() -> new RuntimeException("Tenant not found"));
             
-            // JWT 토큰 생성 (실제 사용자 정보 사용)
-            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getTenant().getId().toString());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername(), user.getTenant().getId().toString());
+            // JWT 토큰 생성
+            String accessToken = jwtTokenProvider.generateAccessToken(userDto.getUsername(), userDto.getTenant().getId().toString());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(userDto.getUsername(), userDto.getTenant().getId().toString());
 
             refreshTokenService.saveRefreshToken(username, refreshToken, jwtTokenProvider.getRefreshTokenExpirationTime());
             
-            // LoginResponse에 사용자 정보 포함
+            // LoginResponse에 정보 포함
             return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(3600)
-                .userId(user.getId())
-                .username(user.getUsername())
-                .name(user.getName())
-                .tenantName(tenant.getName())
-                .email(user.getEmail())
-                .tenantId(user.getTenant().getId().toString())
-                .roles(user.getRoleNames().stream().toList())
-                // .message("Login successful")
+                .userId(userDto.getId()) // 실제 ID 전달
+                .username(userDto.getUsername())
+                .name(userDto.getName())
+                .tenantName(userDto.getTenant().getName())
+                .email(userDto.getEmail())
+                .tenantId(userDto.getTenant().getId().toString())
+                .roles(userDto.getRoles().stream().map(RoleDto::getName).toList())
                 .success(true)
                 .build();
             
@@ -120,47 +113,40 @@ public class AuthService {
     }
 
     public RegisterResponse register(RegisterRequest request, String clientIp) {
-        try {
-            // Rate Limit 체크
-            if (rateLimitService.isIpBlocked(clientIp)) {
-                return RegisterResponse.failure("IP is blocked due to too many attempts");
-            }
-            
-            // 사용자 정보 검증
-            if (userRepository.existsByUsername(request.getUsername())) {
-                return RegisterResponse.failure("Username already exists");
-            }
-            
-            if (userRepository.existsByEmail(request.getEmail())) {
-                return RegisterResponse.failure("Email already exists");
-            }
-
-            if (!request.isTerms()) {
-                return RegisterResponse.failure("Terms approval is required");
-            }
-
-            // 사용자 생성 및 저장 (기본 tenantId는 1로 설정)
-            User user = User.builder()
-                .username(request.getUsername())
-                .name(request.getFirstName() + " " + request.getLastName())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .email(request.getEmail())
-                // .tenantId(1L) // 기본 tenant ID 설정
-                .enabled(true)
-                .build();
-            
-            userRepository.save(user);
-            
-            // Rate Limit 리셋 (성공적인 등록 후)
-            rateLimitService.resetLoginAttempts(clientIp);
-            
-            return RegisterResponse.success(user.getId(), user.getUsername());
-            
-        } catch (Exception e) {
-            // 등록 실패 시 로그 기록
-            log.error("Registration failed: {}", e.getMessage());
-            return RegisterResponse.failure("Registration failed: " + e.getMessage());
+        // Rate Limit 체크
+        if (rateLimitService.isIpBlocked(clientIp)) {
+            throw new TooManyAttemptsException("IP is blocked due to too many attempts");
         }
+        
+        // 사용자 정보 검증
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        if (!request.isTerms()) {
+            throw new IllegalArgumentException("Terms approval is required");
+        }
+
+        // 사용자 생성 및 저장 (기본 tenantId는 1로 설정)
+        User user = User.builder()
+            .username(request.getUsername())
+            .name(request.getFirstName() + " " + request.getLastName())
+            .password(passwordEncoder.encode(request.getPassword()))
+            .email(request.getEmail())
+            // .tenantId(1L) // 기본 tenant ID 설정
+            .enabled(true)
+            .build();
+        
+        userRepository.save(user);
+        
+        // Rate Limit 리셋 (성공적인 등록 후)
+        rateLimitService.resetLoginAttempts(clientIp);
+        
+        return RegisterResponse.success(user.getId(), user.getUsername());
     }
 
     public LoginResponse refreshAccessToken(String refreshToken) {

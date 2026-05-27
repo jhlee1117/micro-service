@@ -9,12 +9,14 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.common.exceptions.BusinessException;
+import com.common.exceptions.code.UserErrorCode;
 import com.microservices.auth_service.dto.UserDto;
 import com.microservices.auth_service.dto.RoleDto;
 import com.microservices.auth_service.dto.TenantDto;
@@ -48,6 +50,14 @@ public class UserService {
 
     public List<UserDto> getUserList() {
         return userRepositoryCustom.getUserList();
+    }
+
+    @Cacheable(value = "users", key = "#username")
+    public UserDto getUserDtoByUsername(String username) {
+        logger.info("Cache miss for username: {}. Fetching from DB...", username);
+        User user = userRepository.findByUsername(username).
+            orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        return createResponseDto(user);
     }
 
     /**
@@ -128,6 +138,7 @@ public class UserService {
         TenantDto tenantDto = TenantDto.fromEntity(user.getTenant());
         
         return new UserDto(
+            user.getId(),
             user.getUsername(),
             user.getEmail(),
             user.getName(),
@@ -236,110 +247,71 @@ public class UserService {
         return savedUser;
     }
 
-    public ResponseEntity<Object> createUser(UserDto userDto) {
-        try {
-            // 중복 사용자 검증
-            validateUserUniqueness(userDto.getUsername(), userDto.getEmail(), null);
-            
-            // UserDto를 User 엔티티로 변환
-            User user = User.builder()
-                    .username(userDto.getUsername())
-                    .email(userDto.getEmail())
-                    .name(userDto.getName())
-                    .password(passwordEncoder.encode(userDto.getPassword()))
-                    .tenant(userDto.getTenant() != null ? userDto.getTenant().toEntity() : null)
-                    .enabled(userDto.isActive())
-                    .build();
-            
-            // User와 Role들을 저장
-            User savedUser = saveNewUserWithRoles(user, userDto.getRoles());
-            
-            // 응답 DTO 생성
-            UserDto responseDto = createResponseDto(savedUser);
-            
-            return ResponseEntity.ok(responseDto);
-            
-        } catch (IllegalArgumentException e) {
-            logger.warn("Validation error creating user: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error creating user: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("사용자 생성 중 오류가 발생했습니다: " + e.getMessage());
-        }
+    @CacheEvict(value = "users", allEntries = true)
+    public UserDto createUser(UserDto userDto) {
+        // 중복 사용자 검증
+        validateUserUniqueness(userDto.getUsername(), userDto.getEmail(), null);
+        
+        // UserDto를 User 엔티티로 변환
+        User user = User.builder()
+                .username(userDto.getUsername())
+                .email(userDto.getEmail())
+                .name(userDto.getName())
+                .password(passwordEncoder.encode(userDto.getPassword()))
+                .tenant(userDto.getTenant() != null ? userDto.getTenant().toEntity() : null)
+                .enabled(userDto.isActive())
+                .build();
+        
+        // User와 Role들을 저장
+        User savedUser = saveNewUserWithRoles(user, userDto.getRoles());
+        
+        // 응답 DTO 생성
+        return createResponseDto(savedUser);
     }
 
     @Transactional
-    public ResponseEntity<Object> updateUser(String username, UserDto userDto) {
-        try {
-            // 기존 사용자 조회
-            Optional<User> existingUserOpt = userRepository.findByUsername(username);
-            if (existingUserOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("User not found: " + username);
-            }
-            
-            User existingUser = existingUserOpt.get();
-            
-            // 이메일 중복 검증만 수행 (username은 변경되지 않으므로)
-            Optional<User> existingUserByEmail = userRepository.findByEmail(userDto.getEmail());
-            if (existingUserByEmail.isPresent() && 
-                !existingUserByEmail.get().getId().equals(existingUser.getId())) {
-                throw new IllegalArgumentException("Email already exists: " + userDto.getEmail());
-            }
-            
-            // 비밀번호 처리 (빈 값이면 기존 비밀번호 유지)
-            String newPassword = (userDto.getPassword() != null && !userDto.getPassword().isBlank()) 
-                ? passwordEncoder.encode(userDto.getPassword()) 
-                : existingUser.getPassword();
-
-            // 업데이트된 User 엔티티 생성
-            User updatedUser = User.builder()
-                    .id(existingUser.getId()) // 기존 ID 유지
-                    .username(username) // username은 변경 불가
-                    .email(userDto.getEmail())
-                    .name(userDto.getName())
-                    .password(newPassword)
-                    .tenant(userDto.getTenant() != null ? userDto.getTenant().toEntity() : null)
-                    .enabled(userDto.isActive())
-                    .createdAt(existingUser.getCreatedAt()) // 기존 생성일 유지
-                    .build();
-            
-            // User와 Role들을 저장
-            User savedUser = saveUpdatedUserWithRoles(updatedUser, userDto.getRoles());
-            
-            // 응답 DTO 생성
-            UserDto responseDto = createResponseDto(savedUser);
-            
-            return ResponseEntity.ok(responseDto);
-            
-        } catch (IllegalArgumentException e) {
-            logger.warn("Validation error updating user: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error updating user: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("사용자 업데이트 중 오류가 발생했습니다: " + e.getMessage());
+    @CacheEvict(value = "users", key = "#username")
+    public UserDto updateUser(String username, UserDto userDto) {
+        // 기존 사용자 조회
+        User existingUser = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        
+        // 이메일 중복 검증만 수행 (username은 변경되지 않으므로)
+        Optional<User> existingUserByEmail = userRepository.findByEmail(userDto.getEmail());
+        if (existingUserByEmail.isPresent() && 
+            !existingUserByEmail.get().getId().equals(existingUser.getId())) {
+            throw new IllegalArgumentException("Email already exists: " + userDto.getEmail());
         }
+        
+        // 비밀번호 처리 (빈 값이면 기존 비밀번호 유지)
+        String newPassword = (userDto.getPassword() != null && !userDto.getPassword().isBlank()) 
+            ? passwordEncoder.encode(userDto.getPassword()) 
+            : existingUser.getPassword();
+
+        // 업데이트된 User 엔티티 생성
+        User updatedUser = User.builder()
+                .id(existingUser.getId())
+                .username(username)
+                .email(userDto.getEmail())
+                .name(userDto.getName())
+                .password(newPassword)
+                .tenant(userDto.getTenant() != null ? userDto.getTenant().toEntity() : null)
+                .enabled(userDto.isActive())
+                .build();
+        
+        // User와 Role들을 저장
+        User savedUser = saveUpdatedUserWithRoles(updatedUser, userDto.getRoles());
+        
+        // 응답 DTO 생성
+        return createResponseDto(savedUser);
     }
 
-    public ResponseEntity<String> deleteUser(String username) {
-        try {
-            Optional<User> existingUserOpt = userRepository.findByUsername(username);
-            if (existingUserOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("User not found: " + username);
-            }
+    @Transactional
+    @CacheEvict(value = "users", key = "#username")
+    public void deleteUser(String username) {
+        User existingUser = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-            User existingUser = existingUserOpt.get();
-            userRepository.deleteById(existingUser.getId());
-
-            return ResponseEntity.ok().build();
-
-        } catch (IllegalArgumentException e) {
-            logger.warn("Validation error deleting user: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error deleting user: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("사용자 삭제 중 오류가 발생했습니다: " + e.getMessage());
-        }
+        userRepository.deleteById(existingUser.getId());
     }
 }
