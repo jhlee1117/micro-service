@@ -1,0 +1,97 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'eclipse'
+	id 'idea'
+}
+
+group = 'com.microservices'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:4.2.0'
+	implementation 'org.springframework.cloud:spring-cloud-starter-config:4.2.0'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'com.h2database:h2'
+	implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+	
+	// QueryDsl 설정용
+	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+	annotationProcessor 'jakarta.annotation:jakarta.annotation-api:3.0.0'
+	annotationProcessor 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+
+	implementation project(':common-jwt')
+	implementation project(':common-exceptions')
+}
+
+def querydslDir = "$buildDir/generated/sources/annotationProcessor/java/main"
+
+sourceSets {
+    main {
+        java {
+            srcDirs += querydslDir
+        }
+    }
+}
+
+// IDE에서 QueryDSL 생성 소스를 인식하도록 설정
+configurations {
+    querydsl.extendsFrom compileClasspath
+}
+
+// QueryDSL 컴파일 의존성을 IDE가 인식하도록 설정
+eclipse {
+    classpath {
+        plusConfigurations += [configurations.querydsl]
+        file {
+            whenMerged { classpath ->
+                classpath.entries.add(new org.gradle.plugins.ide.eclipse.model.SourceFolder("build/generated/sources/annotationProcessor/java/main", null))
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        sourceDirs += file(querydslDir)
+        generatedSourceDirs += file(querydslDir)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+clean {
+    delete file(querydslDir)
+}
