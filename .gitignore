@@ -14,3 +14,7 @@ bin/
 # Ignore QueryDSL generated files in non-standard locations
 **/bin/generated-sources/
 **/bin/default/
+
+# logs
+/logs
+*.log
