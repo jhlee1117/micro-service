@@ -10,6 +10,8 @@ import com.microservices.auth_service.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +32,27 @@ public class TenantService {
     UserRepository userRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "tenants")
     public List<TenantDto> getTenantList() {
         return tenantRepository.findAll().
             stream().map(tenant -> new TenantDto(tenant.getId(), tenant.getName(), tenant.isStatus())).toList();
     }
 
+    @Cacheable(value = "tenants", key = "#id")
+    public TenantDto getTenantDtoById(Long id) {
+        logger.info("Cache miss for tenant ID: {}. Fetching from DB...", id);
+        Tenant tenant = tenantRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(TenantErrorCode.TENANT_NOT_FOUND));
+        return TenantDto.fromEntity(tenant);
+    }
+
+    public Optional<Tenant> findById(Long id) {
+        return tenantRepository.findById(id);
+    }
+
     @Transactional
-    public ResponseEntity<Object> createTenant(TenantDto tenantDto) {
+    @CacheEvict(value = "tenants", allEntries = true)
+    public TenantDto createTenant(TenantDto tenantDto) {
         validateTenantUniqueness(tenantDto.getName(), null);
 
         Tenant tenant = Tenant.builder()
@@ -44,7 +60,7 @@ public class TenantService {
             .status(tenantDto.isStatus())
             .build();
 
-        return ResponseEntity.ok(TenantDto.fromEntity(tenantRepository.save(tenant)));
+        return TenantDto.fromEntity(tenantRepository.save(tenant));
     }
 
     private void validateTenantUniqueness(String name, Long excludeTenantId) {
@@ -57,28 +73,26 @@ public class TenantService {
     }
 
     @Transactional
-    public ResponseEntity<Object> updateTenant(Long id, TenantDto tenantDto) {
+    @CacheEvict(value = "tenants", allEntries = true)
+    public TenantDto updateTenant(Long id, TenantDto tenantDto) {
 
         // 기존 테넌트 조회
-        Optional<Tenant> existingTenantOpt = tenantRepository.findById(id);
-        if (existingTenantOpt.isEmpty()) {
-            throw new BusinessException(TenantErrorCode.TENANT_NOT_FOUND);
-        }
-        Tenant existingTenant = existingTenantOpt.get();
+        Tenant existingTenant = tenantRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(TenantErrorCode.TENANT_NOT_FOUND));
 
         Tenant updatedTenant = Tenant.builder()
             .id(existingTenant.getId())
             .name(existingTenant.getName())
             .status(tenantDto.isStatus())
-            .createdAt(existingTenant.getCreatedAt())
             .build();
 
-        return ResponseEntity.ok(TenantDto.fromEntity(tenantRepository.save(updatedTenant)));
+        return TenantDto.fromEntity(tenantRepository.save(updatedTenant));
     }
 
     @Transactional
-    public ResponseEntity<String> deleteTenant(Long id) {
-        // 1. 조회 및 검증 (실패 시 BusinessException이 던져짐)
+    @CacheEvict(value = "tenants", allEntries = true)
+    public void deleteTenant(Long id) {
+        // 1. 조회 및 검증
         Tenant existingTenant = tenantRepository.findById(id)
             .orElseThrow(() -> new BusinessException(TenantErrorCode.TENANT_NOT_FOUND));
 
@@ -89,8 +103,5 @@ public class TenantService {
 
         // 2. 비즈니스 로직 수행
         tenantRepository.deleteById(existingTenant.getId());
-
-        // 3. 성공 응답
-        return ResponseEntity.ok().build();
     }
 }

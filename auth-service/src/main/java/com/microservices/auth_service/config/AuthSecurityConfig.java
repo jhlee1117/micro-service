@@ -24,6 +24,8 @@ import com.common.jwt.JwtTokenProvider;
 import com.common.jwt.config.JwtFilterConfigurer;
 import com.common.jwt.filter.ServletJwtAuthenticationFilter;
 import com.microservices.auth_service.security.redis.AuthRedisService;
+import com.microservices.auth_service.security.CustomAccessDeniedHandler;
+import com.microservices.auth_service.security.CustomAuthenticationEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -37,6 +39,12 @@ public class AuthSecurityConfig {
     
     @Autowired
     private AuthRedisService authRedisService;
+
+    @Autowired
+    private CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
+    @Autowired
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -70,7 +78,8 @@ public class AuthSecurityConfig {
                     ))
                 )
                 .exceptionHandling(ex -> ex
-                    .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                    .authenticationEntryPoint(customAuthenticationEntryPoint)
+                    .accessDeniedHandler(customAccessDeniedHandler)
                 )
                 // JWT 필터를 UsernamePasswordAuthenticationFilter 이전에 추가
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

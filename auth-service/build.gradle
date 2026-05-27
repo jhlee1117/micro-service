@@ -44,8 +44,11 @@ dependencies {
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api:3.1.0'
 	
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
 	runtimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.postgresql:postgresql'
 	implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
 	implementation project(':common-jwt')
 	testImplementation project(':common-jwt')

@@ -1,5 +1,6 @@
 package com.microservices.auth_service.service;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.microservices.auth_service.domain.entity.QMenu;
@@ -19,6 +20,7 @@ public class MenuService {
 
     private final JPAQueryFactory jpaQueryFactory;
 
+    @Cacheable(value = "user-menus", key = "#userId")
     public List<MenuDto> getMenuListByUserInfo(Long userId) {
         QUserModule qUserModule = QUserModule.userModule;
         QModule qModule = QModule.module;
