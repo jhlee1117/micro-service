@@ -29,9 +29,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@lombok.experimental.SuperBuilder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Tenant {
+public class Tenant extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,14 +42,5 @@ public class Tenant {
 
     @Column(name = "status", nullable = false)
     private boolean status;
-
-    @Column(name = "created_at")
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;   
-
 
 }

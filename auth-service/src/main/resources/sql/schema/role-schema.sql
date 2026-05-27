@@ -5,7 +5,9 @@ CREATE TABLE roles (
     description VARCHAR(200),
     is_system_role BOOLEAN DEFAULT FALSE, -- 시스템 기본 역할 여부
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50)
 );
 
 -- 사용자-역할 매핑
@@ -14,7 +16,10 @@ CREATE TABLE appuser_roles (
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
     granted_by BIGINT, -- 권한을 부여한 사용자
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
     UNIQUE(user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES appuser(id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,

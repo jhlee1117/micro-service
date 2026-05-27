@@ -9,5 +9,7 @@ CREATE TABLE appuser (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
+    created_by VARCHAR(50),
+    updated_by VARCHAR(50),
     FOREIGN KEY (tenant_id) REFERENCES tenant(id)
 );

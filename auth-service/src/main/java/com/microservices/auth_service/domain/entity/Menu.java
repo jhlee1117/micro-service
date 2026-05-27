@@ -18,8 +18,8 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Menu {
+@lombok.experimental.SuperBuilder
+public class Menu extends BaseAuditEntity {
     
     @Id
     @Column(name = "menu_code", nullable = false, length = 10)
@@ -62,13 +62,5 @@ public class Menu {
     
     @Column(name = "icon")
     private String icon;
-    
-    @Column(name = "created_at")
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

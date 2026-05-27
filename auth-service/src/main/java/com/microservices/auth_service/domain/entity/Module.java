@@ -18,8 +18,8 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Module {
+@lombok.experimental.SuperBuilder
+public class Module extends BaseAuditEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,10 +34,6 @@ public class Module {
     @Column(name = "description")
     private String description;
     
-    @Column(name = "created_at")
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-    
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
     @Builder.Default
     private Set<Menu> menus = new HashSet<>();
@@ -50,8 +46,4 @@ public class Module {
     @Builder.Default
     private Set<UserModule> userModules = new HashSet<>();
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }
