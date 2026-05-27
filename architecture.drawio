@@ -1,0 +1,92 @@
+<mxfile host="GeminiCLI" modified="2026-02-25T00:00:00.000Z" agent="Gemini" version="21.0.0" type="device">
+  <diagram id="architecture" name="MSA Architecture">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Boundary: External -->
+        <mxCell id="client_group" value="External Client" style="swimlane;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="client" value="Web / Mobile" style="shape=mxgraph.aws4.client;html=1;fillColor=#ECECEC;" vertex="1" parent="client_group">
+          <mxGeometry x="35" y="40" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway -->
+        <mxCell id="gateway" value="API Gateway&#xa;(Spring Cloud Gateway)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="280" y="60" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Service Discovery -->
+        <mxCell id="discovery" value="Service Discovery&#xa;(Eureka Server)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="560" y="60" width="140" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Microservices Layer -->
+        <mxCell id="msa_layer" value="Microservices Layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="240" y="240" width="480" height="200" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="auth_service" value="Auth Service&#xa;(JWT / RBAC / Multi-Tenant)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="msa_layer">
+          <mxGeometry x="40" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="other_services" value="Other Business Services&#xa;(Future Expansion)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;" vertex="1" parent="msa_layer">
+          <mxGeometry x="280" y="60" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Shared Libraries -->
+        <mxCell id="shared_libs" value="Shared Libraries (Common Modules)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="240" y="480" width="480" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="common_jwt" value="common-jwt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="shared_libs">
+          <mxGeometry x="40" y="40" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="common_exc" value="common-exceptions" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="shared_libs">
+          <mxGeometry x="180" y="40" width="140" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Infrastructure / Persistence -->
+        <mxCell id="infra" value="Infrastructure &amp; Persistence" style="swimlane;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="620" width="680" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="Redis&#xa;(Rate Limit / Session)" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="infra">
+          <mxGeometry x="40" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="sql_db" value="SQL Database&#xa;(User/Role/Tenant)" style="shape=datastore;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="infra">
+          <mxGeometry x="220" y="40" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="docker" value="Docker Compose Orchestration" style="shape=module;whiteSpace=wrap;html=1;fillColor=#ffffff;" vertex="1" parent="infra">
+          <mxGeometry x="460" y="50" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Connections -->
+        <mxCell id="edge1" value="HTTP/REST" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="client" target="gateway">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" value="Register / Discover" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="gateway" target="discovery">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge3" value="Route / Auth Check" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="gateway" target="msa_layer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge5" value="Dependency" style="endArrow=open;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;dashed=1;endFill=0;" edge="1" parent="1" source="msa_layer" target="shared_libs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge6" value="Rate Limiting" style="endArrow=classic;startArrow=classic;html=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="gateway" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="325" y="200" />
+              <mxPoint x="100" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge7" value="Data Persistence" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="auth_service" target="sql_db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
