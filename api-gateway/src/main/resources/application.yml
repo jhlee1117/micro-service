@@ -10,6 +10,10 @@ spring:
         uri: lb://auth-service
         predicates:
           - Path=/auth/**, /user/**, /secure/**, /role/**, /tenant/**
+      - id: board-service
+        uri: lb://board-service
+        predicates:
+          - Path=/board/**
         # filters:
         #   - JwtAuthentication
   data:
@@ -25,7 +29,7 @@ spring:
           min-idle: 0
 
 server:
-  port: 8080
+  port: 8070
 
 eureka:
   client:
