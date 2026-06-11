@@ -1,5 +1,5 @@
 -- 역할 정의 (테넌트 구분 없이 통합)
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(200),
@@ -11,7 +11,7 @@ CREATE TABLE roles (
 );
 
 -- 사용자-역할 매핑
-CREATE TABLE appuser_roles (
+CREATE TABLE IF NOT EXISTS appuser_roles (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
@@ -31,7 +31,8 @@ INSERT INTO roles (name, description, is_system_role) VALUES
 ('ROLE_SUPER_ADMIN', '슈퍼 관리자', TRUE),
 ('ROLE_ADMIN', '관리자', TRUE),
 ('ROLE_USER', '일반 사용자', FALSE),
-('ROLE_VIEWER', '조회 전용', FALSE);
+('ROLE_VIEWER', '조회 전용', FALSE)
+ON CONFLICT (name) DO NOTHING;
 
 -- INSERT INTO appuser_roles (user_id, role_id, granted_by, created_at) VALUES
 -- ('1')
