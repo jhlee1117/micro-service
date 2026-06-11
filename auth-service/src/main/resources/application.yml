@@ -45,6 +45,11 @@ spring:
           max-idle: 8
           min-idle: 0
           max-wait: -1ms
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
 
 server:
   port: 8081
