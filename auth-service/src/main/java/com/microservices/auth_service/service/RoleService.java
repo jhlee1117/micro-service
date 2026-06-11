@@ -13,7 +13,7 @@ public class RoleService {
     @Autowired
     RoleRepository roleRepository;
 
-    @Cacheable(value = "roles")
+    // @Cacheable(value = "roles")
     public List<RoleDto> getRoleList() {
         return roleRepository.findAll().
             stream().map(role -> new RoleDto(role.getId(), role.getName(), role.getDescription(), role.isSystemRole())).toList();
