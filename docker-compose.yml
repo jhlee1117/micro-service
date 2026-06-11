@@ -25,6 +25,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - microservices-network
+    restart: always
+
   service-discovery:
     build: ./service-discovery
     container_name: service-discovery
@@ -74,6 +87,26 @@ services:
       - JWT_SECRET=this-is-a-very-secure-key-and-is-longer-than-32-characters
     depends_on:
       - service-discovery
+      - postgres
+    networks:
+      - microservices-network
+
+  tenant-provisioning-worker:
+    build: ./tenant-provisioning-worker
+    container_name: tenant-provisioning-worker
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_URI=http://service-discovery:8761/eureka/
+      - RABBITMQ_HOST=rabbitmq
+      - DB_URL=jdbc:postgresql://postgres:5432/micro_db
+      - DB_USERNAME=msa_user
+      - DB_PASSWORD=password
+    depends_on:
+      - service-discovery
+      - rabbitmq
       - postgres
     networks:
       - microservices-network
