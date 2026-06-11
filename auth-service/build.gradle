@@ -57,6 +57,9 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-config:4.2.0'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+
+    // RabbitMQ 메시지 브로커 도입
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
 }
 
 def querydslDir = "$buildDir/generated/sources/annotationProcessor/java/main"
