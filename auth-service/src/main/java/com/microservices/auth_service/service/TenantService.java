@@ -6,12 +6,14 @@ import java.util.Optional;
 
 import com.common.exceptions.BusinessException;
 import com.common.exceptions.code.TenantErrorCode;
+import com.microservices.auth_service.event.TenantCreatedEvent;
 import com.microservices.auth_service.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,9 @@ public class TenantService {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "tenants")
@@ -60,7 +65,12 @@ public class TenantService {
             .status(tenantDto.isStatus())
             .build();
 
-        return TenantDto.fromEntity(tenantRepository.save(tenant));
+        Tenant savedTenant = tenantRepository.save(tenant);
+
+        // eventPublisher 에 테넌트 생성 이벤트가 실행되었다는 것을 알림
+        eventPublisher.publishEvent(new TenantCreatedEvent(savedTenant));
+
+        return TenantDto.fromEntity(savedTenant);
     }
 
     private void validateTenantUniqueness(String name, Long excludeTenantId) {
