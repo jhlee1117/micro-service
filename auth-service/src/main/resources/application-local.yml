@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:~/msa_testdb;MODE=PostgreSQL;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -25,6 +25,7 @@ spring:
     init:
       encoding: UTF-8
       mode: always
+      continue-on-error: true
       schema-locations:
       - classpath:sql/schema/tenant-schema.sql
       - classpath:sql/schema/user-schema.sql
