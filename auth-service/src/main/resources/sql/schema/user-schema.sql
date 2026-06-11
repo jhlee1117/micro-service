@@ -1,5 +1,5 @@
 -- 사용자
-CREATE TABLE appuser (
+CREATE TABLE IF NOT EXISTS appuser (
     id BIGSERIAL PRIMARY KEY,
     tenant_id BIGINT,
     username VARCHAR(100) NOT NULL UNIQUE,

@@ -1,6 +1,6 @@
-CREATE TABLE modules (
+CREATE TABLE IF NOT EXISTS modules (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     url VARCHAR(50) NOT NULL,
     description VARCHAR(255),
     created_at TIMESTAMP,
@@ -9,7 +9,7 @@ CREATE TABLE modules (
     updated_by VARCHAR(50)
 );
 -- 메뉴 테이블
-CREATE TABLE menus (
+CREATE TABLE IF NOT EXISTS menus (
     menu_code VARCHAR(10) PRIMARY KEY,
     parent_menu_code VARCHAR(10) NULL,
     module_id BIGINT NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE menus (
     FOREIGN KEY (module_id) REFERENCES modules(id)
 );
 -- 테넌트가 어떤 모듈을 사용하는지
-CREATE TABLE tenant_modules (
+CREATE TABLE IF NOT EXISTS tenant_modules (
     id BIGSERIAL PRIMARY KEY,
     tenant_id BIGINT NOT NULL,
     module_id BIGINT NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE tenant_modules (
     FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
 );
 -- 사용자별 모듈 접근 권한
-CREATE TABLE user_modules (
+CREATE TABLE IF NOT EXISTS user_modules (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     module_id BIGINT NOT NULL,
