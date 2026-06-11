@@ -1,5 +1,5 @@
 -- 테넌트 (회사)
-CREATE TABLE tenant (
+CREATE TABLE IF NOT EXISTS tenant (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     status BOOLEAN DEFAULT TRUE,
