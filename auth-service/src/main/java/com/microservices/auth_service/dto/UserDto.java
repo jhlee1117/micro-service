@@ -22,7 +22,8 @@ public class UserDto {
     
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // 쓰기 전용 (클라이언트에서 받지만 응답에는 포함하지 않음)
     private String password;
-    
+
+    @JsonProperty("active")
     private boolean isActive;
     private Set<RoleDto> roles;
     private TenantDto tenant;
