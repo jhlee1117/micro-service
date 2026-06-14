@@ -1,3 +1,2 @@
-INSERT INTO tenant (name, status, created_at, updated_at)
-VALUES ('Test', TRUE, NOW(), NOW())
-ON CONFLICT (name) DO NOTHING;
+MERGE INTO tenant (id, name, status, created_at, updated_at) KEY(name)
+VALUES (1, 'Test', TRUE, NOW(), NOW());

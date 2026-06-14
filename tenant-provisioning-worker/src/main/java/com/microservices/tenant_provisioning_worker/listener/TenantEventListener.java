@@ -1,5 +1,6 @@
 package com.microservices.tenant_provisioning_worker.listener;
 
+import com.microservices.tenant_provisioning_worker.event.TenantDroppedEvent;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import com.microservices.tenant_provisioning_worker.config.RabbitMQConfig;
@@ -21,6 +22,19 @@ public class TenantEventListener {
 
         try {
             schemaProvisioningService.createTenantSchema(event.getTenantName());
+            log.info("Finished processing for event: {}", event.getEventId());
+        } catch (Exception e) {
+            log.error("Failed to provision schema for tenant: {}. Error: {}", event.getTenantName(), e.getMessage());
+            throw e;
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.TENANT_SCHEMA_DROP_QUEUE)
+    public void onTenantDropped(TenantDroppedEvent event) {
+        log.info("Received TenantDroppedEvent: {}", event);
+
+        try {
+            schemaProvisioningService.dropTenantSchema(event.getTenantName());
             log.info("Finished processing for event: {}", event.getEventId());
         } catch (Exception e) {
             log.error("Failed to provision schema for tenant: {}. Error: {}", event.getTenantName(), e.getMessage());

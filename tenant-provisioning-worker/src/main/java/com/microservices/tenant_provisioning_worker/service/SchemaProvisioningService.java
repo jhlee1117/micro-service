@@ -18,14 +18,32 @@ public class SchemaProvisioningService {
         log.info("Starting schema provisioning for tenant: {}", tenantName);
 
         // 1. 보안 검증
-        if (!tenantName.matches("^[a-zA-Z0-9_]+$")) {
-            throw new IllegalArgumentException("Invalid tenant name format: " + tenantName);
-        }
+        checkTenantName(tenantName);
 
         // 2. 스키마 생성 쿼리 실행
         String createSchemaQuery = "CREATE SCHEMA IF NOT EXISTS " + tenantName;
         jdbcTemplate.execute(createSchemaQuery);
 
         log.info("Successfully created schema: {}", tenantName);
+    }
+
+    private static void checkTenantName(String tenantName) {
+        if (!tenantName.matches("^[a-zA-Z0-9_]+$")) {
+            throw new IllegalArgumentException("Invalid tenant name format: " + tenantName);
+        }
+    }
+
+    @Transactional
+    public void dropTenantSchema(String tenantName) {
+        log.info("Deleting schema provisioning for tenant: {}", tenantName);
+
+        // 1. 보안 검증
+        checkTenantName(tenantName);
+
+        // 2. 스키마 삭제 쿼리 실행
+        String dropSchemaQuery = "DROP SCHEMA IF EXISTS " + tenantName + " CASCADE ";
+        jdbcTemplate.execute(dropSchemaQuery);
+
+        log.info("Successfully deleted schema: {}", tenantName);
     }
 }

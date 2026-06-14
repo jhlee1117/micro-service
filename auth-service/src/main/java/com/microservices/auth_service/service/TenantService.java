@@ -7,6 +7,7 @@ import java.util.Optional;
 import com.common.exceptions.BusinessException;
 import com.common.exceptions.code.TenantErrorCode;
 import com.microservices.auth_service.event.TenantCreatedEvent;
+import com.microservices.auth_service.event.TenantDroppedEvent;
 import com.microservices.auth_service.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,5 +114,7 @@ public class TenantService {
 
         // 2. 비즈니스 로직 수행
         tenantRepository.deleteById(existingTenant.getId());
+
+        eventPublisher.publishEvent(new TenantDroppedEvent(existingTenant));
     }
 }
