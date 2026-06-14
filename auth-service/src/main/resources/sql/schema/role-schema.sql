@@ -1,21 +1,21 @@
--- 역할 정의 (테넌트 구분 없이 통합)
+-- Roles
 CREATE TABLE IF NOT EXISTS roles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(200),
-    is_system_role BOOLEAN DEFAULT FALSE, -- 시스템 기본 역할 여부
+    is_system_role BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     created_by VARCHAR(50),
     updated_by VARCHAR(50)
 );
 
--- 사용자-역할 매핑
+-- User-role mapping
 CREATE TABLE IF NOT EXISTS appuser_roles (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
-    granted_by BIGINT, -- 권한을 부여한 사용자
+    granted_by BIGINT,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     created_by VARCHAR(50),
@@ -25,14 +25,3 @@ CREATE TABLE IF NOT EXISTS appuser_roles (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (granted_by) REFERENCES appuser(id)
 );
-
--- 기본 역할 데이터
-INSERT INTO roles (name, description, is_system_role) VALUES 
-('ROLE_SUPER_ADMIN', '슈퍼 관리자', TRUE),
-('ROLE_ADMIN', '관리자', TRUE),
-('ROLE_USER', '일반 사용자', FALSE),
-('ROLE_VIEWER', '조회 전용', FALSE)
-ON CONFLICT (name) DO NOTHING;
-
--- INSERT INTO appuser_roles (user_id, role_id, granted_by, created_at) VALUES
--- ('1')

@@ -1,14 +1,12 @@
-INSERT INTO modules (name, url, description)
+MERGE INTO modules (id, name, url, description) KEY(name)
 VALUES
-('System Management', '/system/management', '전체 시스템 관리 기능'),
-('HR Management', '/hr/management', '인사 관리 기능')
-ON CONFLICT (name) DO NOTHING;
+(1, 'System Management', '/system/management', 'System management features'),
+(2, 'HR Management', '/hr/management', 'HR management features');
 
-INSERT INTO tenant_modules (tenant_id, module_id, plan_type) VALUES
-(1, 1, 'free')
-ON CONFLICT (tenant_id, module_id) DO NOTHING;
+MERGE INTO tenant_modules (tenant_id, module_id, plan_type) KEY(tenant_id, module_id)
+VALUES (1, 1, 'free');
 
-INSERT INTO user_modules (user_id, module_id) VALUES
+MERGE INTO user_modules (user_id, module_id) KEY(user_id, module_id)
+VALUES
 (1, 1),
-(1, 2)
-ON CONFLICT (user_id, module_id) DO NOTHING;
+(1, 2);
