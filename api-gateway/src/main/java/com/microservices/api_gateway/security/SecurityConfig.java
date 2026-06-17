@@ -40,7 +40,15 @@ public class SecurityConfig {
                     return exchange.getResponse().setComplete();
                 }))
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/auth/login", "/auth/register", "/auth/hello", "/auth/refresh", "/public/**").permitAll()
+                .pathMatchers(
+                    "/auth/login",
+                    "/auth/register",
+                    "/auth/hello",
+                    "/auth/refresh",
+                    "/oauth2/**",
+                    "/login/oauth2/**",
+                    "/public/**"
+                ).permitAll()
                 .anyExchange().authenticated()
             )
             .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
