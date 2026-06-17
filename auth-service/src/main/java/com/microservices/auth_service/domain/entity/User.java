@@ -37,8 +37,17 @@ public class User extends BaseAuditEntity {
     @Column(name = "name")
     private String name;
     
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_type", nullable = false)
+    @Builder.Default
+    private AuthType authType = AuthType.LOCAL;
+
+    @Column(name = "signup_completed", nullable = false)
+    @Builder.Default
+    private boolean signupCompleted = true;
         
     @Column(name = "is_active", nullable = false)
     @Builder.Default
