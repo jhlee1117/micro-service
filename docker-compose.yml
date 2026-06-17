@@ -59,14 +59,16 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - EUREKA_URI=http://service-discovery:8761/eureka/
       - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
       - DB_URL=jdbc:postgresql://postgres:5432/micro_db
-      - DB_USERNAME=msa_user
+      - DB_USERNAME=user
       - DB_PASSWORD=password
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRATION=3600000
     depends_on:
       - service-discovery
       - redis
+      - rabbitmq
       - postgres
     networks:
       - microservices-network
@@ -82,7 +84,7 @@ services:
       - EUREKA_URI=http://service-discovery:8761/eureka/
       - REDIS_HOST=redis
       - DB_URL=jdbc:postgresql://postgres:5432/micro_db
-      - DB_USERNAME=msa_user
+      - DB_USERNAME=user
       - DB_PASSWORD=password
       - JWT_SECRET=${JWT_SECRET}
     depends_on:
@@ -102,7 +104,7 @@ services:
       - EUREKA_URI=http://service-discovery:8761/eureka/
       - RABBITMQ_HOST=rabbitmq
       - DB_URL=jdbc:postgresql://postgres:5432/micro_db
-      - DB_USERNAME=msa_user
+      - DB_USERNAME=user
       - DB_PASSWORD=password
     depends_on:
       - service-discovery
