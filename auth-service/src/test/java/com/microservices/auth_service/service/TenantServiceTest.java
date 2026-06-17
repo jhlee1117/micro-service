@@ -2,6 +2,7 @@ package com.microservices.auth_service.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,16 +11,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.microservices.auth_service.domain.entity.Tenant;
 import com.microservices.auth_service.dto.TenantDto;
+import com.microservices.auth_service.event.TenantCreatedEvent;
 import com.microservices.auth_service.repository.TenantRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +37,9 @@ public class TenantServiceTest {
     private TenantService tenantService;
 
     private List<Tenant> mockTenants;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @BeforeEach
     void setUp() {
@@ -126,5 +134,41 @@ public class TenantServiceTest {
         // Then
         verify(tenantRepository).findAll();
         verifyNoMoreInteractions(tenantRepository);
+    }
+
+    @Test
+    void testCreateTenant_테넌트생성후스키마확인() {
+        // Given
+        TenantDto request = new TenantDto(null, "test_tenant", true);
+
+        Tenant savedTenant = Tenant.builder()
+            .id(100L)
+            .name("test_tenant")
+            .status(true)
+            .build();
+
+        when(tenantRepository.findByName("test_tenant")).thenReturn(Optional.empty());
+        when(tenantRepository.save(any(Tenant.class))).thenReturn(savedTenant);
+
+        // When
+        TenantDto result = tenantService.createTenant(request);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(100L, result.getId());
+        assertTrue(result.isStatus());
+
+        ArgumentCaptor<TenantCreatedEvent> eventCaptor = ArgumentCaptor.forClass(TenantCreatedEvent.class);
+
+        verify(applicationEventPublisher, times(1)).publishEvent(eventCaptor.capture());
+
+        TenantCreatedEvent tenantCreatedEvent = eventCaptor.getValue();
+        assertNotNull(tenantCreatedEvent.getEventId());
+        assertNotNull(tenantCreatedEvent.getTimestamp());
+        assertEquals(100L, tenantCreatedEvent.getTenantId());
+
+        verify(tenantRepository, times(1)).findByName("test_tenant");
+        verify(tenantRepository, times(1)).save(any(Tenant.class));
+
     }
 }
