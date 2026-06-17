@@ -1,63 +1,23 @@
 spring:
   application:
     name: auth-service
+  profiles:
+    active: local
   mvc:
     throw-exception-if-no-handler-found: true
   web:
     resources:
       add-mappings: false
-  config:
-    import: optional:configserver:http://localhost:8888
-  profiles:
-    active: local # 기본값(local), 운영 배포 시 prod로 변경
-  datasource:
-    # 실제 연결 정보는 profile별 yml에서 오버라이드
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        # 추가 안정성 설정
-        jdbc:
-          time_zone: UTC
-        connection:
-          provider_disables_autocommit: true
-        # 디버깅 모드에서 발생하는 문제 해결
-        generate_statistics: false
-        use_sql_comments: true
-    console:
-      enabled: true
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: 5672
-    username: guest
-    password: guest
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
 
 server:
   port: 8081
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
 
 springdoc:
   api-docs:
@@ -68,15 +28,24 @@ springdoc:
     url: /v3/api-docs
     configUrl: /v3/api-docs/swagger-config
 
-# JWT 설정
 jwt:
   secret: override-from-config-server
-  expiration: 3600000 # 1시간 (밀리초)
-  refresh-expiration: 604800000 # 1주일 (밀리초)
+  expiration: 3600000
+  refresh-expiration: 604800000
 
-# Rate Limiting 설정
 rate-limit:
   login:
     max-attempts: 5
     window-minutes: 15
     block-duration-minutes: 30
+
+frontend:
+  url: http://localhost:3000
+  oauth2:
+    success-path: /oauth2/success
+    signup-path: /auth/signup
+    failure-path: /oauth2/error
+
+app:
+  oauth2:
+    id-token-clock-skew: 300s

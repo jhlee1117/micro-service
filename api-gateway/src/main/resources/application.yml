@@ -1,40 +1,23 @@
 spring:
   application:
     name: api-gateway
-  config:
-    import: optional:configserver:http://localhost:8888
+  profiles:
+    active: local
   cloud:
     gateway:
       routes:
       - id: auth-service
         uri: lb://auth-service
         predicates:
-          - Path=/auth/**, /user/**, /secure/**, /role/**, /tenant/**
+          - Path=/auth/**, /user/**, /secure/**, /role/**, /tenant/**, /oauth2/**, /login/oauth2/**
       - id: board-service
         uri: lb://board-service
         predicates:
           - Path=/board/**
         # filters:
         #   - JwtAuthentication
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 3000
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          max-wait: -1
-          min-idle: 0
-
 server:
   port: 8070
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
 
 jwt:
   secret: override-from-config-server

@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:configserver:http://localhost:8888
   datasource:
     url: jdbc:h2:file:~/msa_testdb;MODE=PostgreSQL;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
@@ -6,38 +8,50 @@ spring:
     password:
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        # EntityManager 충돌 방지를 위한 설정
-        # entitymanager_factory_interface: jakarta.persistence.EntityManagerFactory
-        # 추가 안정성 설정
+        format_sql: true
         jdbc:
           time_zone: UTC
         connection:
           provider_disables_autocommit: true
-        # 디버깅 모드에서 발생하는 문제 해결
         generate_statistics: false
         use_sql_comments: true
   sql:
     init:
-      encoding: UTF-8
-      mode: always
-      continue-on-error: false
-      schema-locations:
-      - classpath:sql/schema/tenant-schema.sql
-      - classpath:sql/schema/user-schema.sql
-      - classpath:sql/schema/role-schema.sql  # user 테이블 생성 후에 실행
-      - classpath:sql/schema/modules-schema.sql
-      data-locations:
-      - classpath:sql/data/tenant-data.sql
-      - classpath:sql/data/role-data.sql
-      - classpath:sql/data/user-data.sql
-      - classpath:sql/data/modules-data.sql
-      - classpath:sql/data/menus-data.sql
-      
+      mode: never
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations:
+      - classpath:db/migration/common
+      - classpath:db/migration/h2
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
 app:
   cookie:
     domain: localhost
