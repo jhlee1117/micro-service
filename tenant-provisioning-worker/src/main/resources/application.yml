@@ -1,20 +1,8 @@
 spring:
   application:
     name: tenant-provisioning-worker
-  config:
-    import: optional:configserver:http://localhost:8888
   profiles:
     active: local
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
 
 server:
   port: 8083
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/

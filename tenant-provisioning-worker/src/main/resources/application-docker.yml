@@ -3,7 +3,7 @@ spring:
     import: optional:configserver:http://config-server:8888
   datasource:
     url: ${DB_URL:jdbc:postgresql://postgres:5432/micro_db}
-    username: ${DB_USERNAME:msa_user}
+    username: ${DB_USERNAME:user}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
   jpa:

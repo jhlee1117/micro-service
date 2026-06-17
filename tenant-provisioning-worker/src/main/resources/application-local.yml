@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:configserver:http://localhost:8888
   datasource:
     url: jdbc:h2:file:~/msa_testdb;MODE=PostgreSQL;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
@@ -12,3 +14,13 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
