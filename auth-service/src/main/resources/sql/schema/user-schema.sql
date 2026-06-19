@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS appuser (
     name VARCHAR(100),
     auth_type VARCHAR(20) DEFAULT 'LOCAL',
     signup_completed BOOLEAN DEFAULT TRUE,
+    signup_token_hash VARCHAR(100),
+    signup_token_expires_at TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,

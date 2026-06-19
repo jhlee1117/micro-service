@@ -48,6 +48,12 @@ public class User extends BaseAuditEntity {
     @Column(name = "signup_completed", nullable = false)
     @Builder.Default
     private boolean signupCompleted = true;
+
+    @Column(name = "signup_token_hash", nullable = true)
+    private String signupTokenHash;
+
+    @Column(name = "signup_token_expires_at", nullable = true)
+    private LocalDateTime signupTokenExpiresAt;
         
     @Column(name = "is_active", nullable = false)
     @Builder.Default
