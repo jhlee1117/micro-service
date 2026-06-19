@@ -73,6 +73,7 @@ public class AuthSecurityConfig {
                         "/auth/register",
                         "/auth/refresh",
                         "/auth/hello",
+                        "/auth/oauth/signup/complete",
                         "/oauth2/**",
                         "/login/oauth2/**"
                     ).permitAll()
