@@ -43,9 +43,10 @@ frontend:
   url: http://localhost:3000
   oauth2:
     success-path: /oauth2/success
-    signup-path: /auth/signup
+    signup-path: /oauth2/signup
     failure-path: /oauth2/error
 
 app:
   oauth2:
     id-token-clock-skew: 300s
+    signup-token-ttl: 15m
