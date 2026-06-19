@@ -1,6 +1,9 @@
 spring:
   config:
     import: ""
+  cloud:
+    config:
+      enabled: false
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;
     driver-class-name: org.h2.Driver
@@ -13,7 +16,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   sql:
     init:
       mode: never
@@ -24,3 +26,7 @@ spring:
       host: localhost
       port: 6379
       timeout: 2000ms
+
+eureka:
+  client:
+    enabled: false
