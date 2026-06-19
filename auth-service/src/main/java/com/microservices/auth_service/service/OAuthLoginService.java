@@ -1,22 +1,33 @@
 package com.microservices.auth_service.service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.common.exceptions.BusinessException;
 import com.common.exceptions.NoTenantException;
+import com.common.exceptions.code.TenantErrorCode;
+import com.common.exceptions.code.UserErrorCode;
 import com.common.jwt.JwtTokenProvider;
+import com.common.util.TokenGenerator;
 import com.microservices.auth_service.domain.entity.AuthType;
 import com.microservices.auth_service.domain.entity.OAuthAccount;
+import com.microservices.auth_service.domain.entity.Tenant;
 import com.microservices.auth_service.domain.entity.User;
 import com.microservices.auth_service.dto.LoginResponse;
 import com.microservices.auth_service.dto.RoleDto;
 import com.microservices.auth_service.dto.UserDto;
 import com.microservices.auth_service.oauth.OAuthLoginResult;
+import com.microservices.auth_service.oauth.OAuthPendingSignup;
+import com.microservices.auth_service.oauth.OAuthSignupCompleteRequest;
 import com.microservices.auth_service.oauth.OAuthUserProfile;
 import com.microservices.auth_service.repository.OAuthAccountRepository;
+import com.microservices.auth_service.repository.TenantRepository;
 import com.microservices.auth_service.repository.UserRepository;
 
 @Service
@@ -24,22 +35,28 @@ public class OAuthLoginService {
 
     private final OAuthAccountRepository oauthAccountRepository;
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
+    private final Duration signupTokenTtl;
 
     public OAuthLoginService(
         OAuthAccountRepository oauthAccountRepository,
         UserRepository userRepository,
+        TenantRepository tenantRepository,
         UserService userService,
         JwtTokenProvider jwtTokenProvider,
-        RefreshTokenService refreshTokenService
+        RefreshTokenService refreshTokenService,
+        @Value("${app.oauth2.signup-token-ttl:15m}") Duration signupTokenTtl
     ) {
         this.oauthAccountRepository = oauthAccountRepository;
         this.userRepository = userRepository;
+        this.tenantRepository = tenantRepository;
         this.userService = userService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
+        this.signupTokenTtl = signupTokenTtl;
     }
 
     @Transactional
@@ -49,7 +66,7 @@ public class OAuthLoginService {
         return oauthAccountRepository
             .findByProviderAndProviderUserId(profile.provider(), profile.providerUserId())
             .map(OAuthAccount::getUser)
-            .map(this::issueTokenOrSignupRequired)
+            .map(this::issueTokenOrPendingSignup)
             .orElseGet(() -> linkOrCreateUser(profile));
     }
 
@@ -67,7 +84,7 @@ public class OAuthLoginService {
         }
 
         userRepository.save(user);
-        return issueTokenOrSignupRequired(user);
+        return issueTokenOrPendingSignup(user);
     }
 
     private OAuthLoginResult createPendingUser(OAuthUserProfile profile) {
@@ -83,16 +100,83 @@ public class OAuthLoginService {
         User savedUser = userRepository.save(user);
         createOAuthAccount(savedUser, profile);
 
-        return OAuthLoginResult.signupRequired(savedUser.getId(), savedUser.getEmail());
+        return OAuthLoginResult.pending(
+            savedUser.getId(),
+            savedUser.getEmail(),
+            preparePendingSignup(savedUser)
+        );
     }
 
-    private OAuthLoginResult issueTokenOrSignupRequired(User user) {
+    private OAuthLoginResult issueTokenOrPendingSignup(User user) {
         if (!user.isSignupCompleted() || user.getTenant() == null || user.getTenant().getId() == null) {
-            return OAuthLoginResult.signupRequired(user.getId(), user.getEmail());
+            return OAuthLoginResult.pending(
+                user.getId(),
+                user.getEmail(),
+                preparePendingSignup(user)
+            );
         }
 
         LoginResponse loginResponse = issueLoginTokens(user);
         return OAuthLoginResult.loggedIn(loginResponse);
+    }
+
+    @Transactional
+    public LoginResponse completeSignup(OAuthSignupCompleteRequest request) {
+        String signupTokenHash = TokenGenerator.hashToken(request.signupToken());
+        User user = userRepository.findBySignupTokenHash(signupTokenHash)
+            .orElseThrow(() -> new BusinessException(UserErrorCode.INVALID_SIGNUP_TOKEN));
+
+        validateSignupToken(user, request.signupToken());
+        validateUsernameAvailable(request.username(), user.getId());
+
+        Tenant tenant = tenantRepository.findById(request.tenantId())
+            .orElseThrow(() -> new BusinessException(TenantErrorCode.TENANT_NOT_FOUND));
+
+        user.setUsername(request.username());
+        user.setName(request.name());
+        user.setTenant(tenant);
+        user.setSignupCompleted(true);
+        user.setSignupTokenHash(null);
+        user.setSignupTokenExpiresAt(null);
+        userRepository.save(user);
+
+        return issueLoginTokens(user);
+    }
+
+    private OAuthPendingSignup preparePendingSignup(User user) {
+        Long tenantId = user.getTenant() == null ? null : user.getTenant().getId();
+        String signupToken = TokenGenerator.generateOpaqueToken();
+
+        user.setSignupTokenHash(TokenGenerator.hashToken(signupToken));
+        user.setSignupTokenExpiresAt(LocalDateTime.now().plus(signupTokenTtl));
+        userRepository.save(user);
+
+        return new OAuthPendingSignup(
+            signupToken,
+            user.getUsername(),
+            user.getName(),
+            tenantId
+        );
+    }
+
+    private void validateSignupToken(User user, String signupToken) {
+        if (user.isSignupCompleted()
+            || !TokenGenerator.matches(signupToken, user.getSignupTokenHash())) {
+            throw new BusinessException(UserErrorCode.INVALID_SIGNUP_TOKEN);
+        }
+
+        if (user.getSignupTokenExpiresAt() == null
+            || !user.getSignupTokenExpiresAt().isAfter(LocalDateTime.now())) {
+            throw new BusinessException(UserErrorCode.EXPIRED_SIGNUP_TOKEN);
+        }
+    }
+
+    private void validateUsernameAvailable(String username, Long currentUserId) {
+        userRepository.findByUsername(username)
+            .filter(existingUser -> !existingUser.getId().equals(currentUserId))
+            .ifPresent(existingUser -> {
+                throw new BusinessException(UserErrorCode.ALREADY_EXISTS_USER);
+            });
     }
 
     private LoginResponse issueLoginTokens(User user) {
