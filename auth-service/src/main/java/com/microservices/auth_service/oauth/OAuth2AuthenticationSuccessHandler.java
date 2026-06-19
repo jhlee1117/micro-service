@@ -55,7 +55,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         OAuthUserProfile profile = profileExtractorRegistry.extract(provider, oauthToken.getPrincipal().getAttributes());
         OAuthLoginResult result = oauthLoginService.loginOrPrepareSignup(profile);
 
-        if (result.status() == OAuthLoginStatus.SIGNUP_REQUIRED) {
+        if (result.status() == OAuthLoginStatus.PENDING) {
             response.sendRedirect(signupRedirectUrl(result));
             return;
         }
@@ -75,9 +75,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     }
 
     private String signupRedirectUrl(OAuthLoginResult result) {
+        OAuthPendingSignup pendingSignup = result.pendingSignup();
+
         return UriComponentsBuilder.fromUriString(frontendUrl + signupPath)
-            .queryParam("user_id", result.userId())
-            .queryParam("email", result.email())
+//            .queryParam("user_id", result.userId())
+//            .queryParam("email", result.email())
+            .queryParam("status", "pending")
+            .queryParam("signup_token", pendingSignup.signupToken())
+            .queryParam("name", pendingSignup.name())
             .build()
             .encode()
             .toUriString();
