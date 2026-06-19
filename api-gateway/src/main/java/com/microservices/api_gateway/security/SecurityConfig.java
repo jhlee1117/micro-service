@@ -45,9 +45,11 @@ public class SecurityConfig {
                     "/auth/register",
                     "/auth/hello",
                     "/auth/refresh",
+                    "/auth/oauth/signup/complete",
                     "/oauth2/**",
                     "/login/oauth2/**",
-                    "/public/**"
+                    "/public/**",
+                    "/tenant/list"
                 ).permitAll()
                 .anyExchange().authenticated()
             )
