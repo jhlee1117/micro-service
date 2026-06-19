@@ -57,6 +57,8 @@ dependencies {
 	testImplementation project(':common-jwt')
 	implementation project(':common-exceptions')
 	testImplementation project(':common-exceptions')
+    implementation project(':common-util')
+    testImplementation project(':common-util')
 	implementation 'org.springframework.cloud:spring-cloud-starter-config:4.2.0'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
