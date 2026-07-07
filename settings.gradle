@@ -14,7 +14,6 @@ rootProject.name = 'micro-service'
 include('common-exceptions')
 include('common-jwt')
 include('common-util')
-include('service-discovery')
 include('api-gateway')
 include('auth-service')
 include('board-service')
