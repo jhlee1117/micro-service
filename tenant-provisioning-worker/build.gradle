@@ -24,6 +24,7 @@ dependencies {
 	
 	// RabbitMQ
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 	
 	// DB 연동 (스키마 생성을 위해)
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
