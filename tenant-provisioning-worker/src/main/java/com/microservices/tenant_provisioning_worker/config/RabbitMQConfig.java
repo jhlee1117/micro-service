@@ -3,6 +3,9 @@ package com.microservices.tenant_provisioning_worker.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microservices.tenant_provisioning_worker.event.TenantDroppedEvent;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
@@ -112,7 +115,12 @@ public class RabbitMQConfig {
 
     @Bean
     public MessageConverter jackson2JsonMessageConverter() {
-        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
 
         DefaultClassMapper classMapper = new DefaultClassMapper();
         classMapper.setTrustedPackages(
@@ -141,6 +149,7 @@ public class RabbitMQConfig {
         factory.setMessageConverter(messageConverter);
         factory.setAdviceChain(retryOperationsInterceptor);
         factory.setDefaultRequeueRejected(false);
+        factory.setMissingQueuesFatal(false);
 
         return factory;
     }
