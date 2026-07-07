@@ -7,8 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,9 +39,5 @@ public class Module extends BaseAuditEntity {
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
     @Builder.Default
     private Set<TenantModule> tenantModules = new HashSet<>();
-    
-    @OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
-    @Builder.Default
-    private Set<UserModule> userModules = new HashSet<>();
 
 }
