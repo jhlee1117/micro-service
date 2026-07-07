@@ -38,17 +38,6 @@ services:
       - microservices-network
     restart: always
 
-  service-discovery:
-    build: ./service-discovery
-    container_name: service-discovery
-    ports:
-      - "8761:8761"
-    networks:
-      - microservices-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    restart: unless-stopped
-
   auth-service:
     build: ./auth-service
     container_name: auth-service
