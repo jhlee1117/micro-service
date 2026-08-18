@@ -13,8 +13,6 @@ erDiagram
   MENUS |o--o{ MENUS : "parent-child relationship"
   APPUSER ||--o{ USER_ROLES : "user roles mappings"
   ROLES ||--o{ USER_ROLES : "assigned role"
-  APPUSER ||--o{ USER_MODULES : "user allowed modules"
-  MODULE ||--o{ USER_MODULES : "module mappings"
   APPUSER ||--o{ OAUTH_ACCOUNT : "has oauth accounts"
   APPUSER ||--o{ USER_ROLES : "granted role by"
   
@@ -122,18 +120,6 @@ erDiagram
     varchar created_by
     varchar updated_by
   }
-  
-  USER_MODULES {
-    bigint id PK
-    bigint user_id FK
-    bigint module_id FK
-    varchar role "admin, user, viewer etc."
-    boolean enabled
-    timestamp created_at
-    timestamp updated_at
-    varchar created_by
-    varchar updated_by
-  }
 
   BOARDS {
     bigint id PK
@@ -158,7 +144,6 @@ erDiagram
 - **`modules`**: 시스템의 대메뉴 또는 마이크로서비스 기능 단위 모듈.
 - **`menus`**: 모듈 내부에서 사용할 수 있는 세부 메뉴 항목. 계층형 트리 구조(Self-Referencing `parent_menu_code`)를 가집니다.
 - **`tenant_modules`**: 특정 테넌트가 활성화한 모듈과 해당 플랜 유형(`plan_type`)을 관리합니다.
-- **`user_modules`**: 사용자에게 허용된 모듈 범위 및 모듈별 역할을 정의합니다.
 
 ### 게시판 서비스 (`board-service`)
 - **`boards`**: 자유게시판 정보 테이블. `author_id`는 MSA 아키텍처 원칙에 따라 외래 키(FK) 제약 조건 없이 물리적으로 분리되어 있으며, 논리적으로 `appuser` 테이블의 사용자 계정명(`username`)과 결합됩니다.

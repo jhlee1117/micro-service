@@ -1,9 +1,0 @@
-{
-  "storage_path": "./.gemini",
-  "chat_path": "./.gemini/chats",
-  "mcpServers": {
-    "drawio": {
-      "url": "https://mcp.draw.io/mcp"
-    }
-  }
-}
