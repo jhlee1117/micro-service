@@ -6,7 +6,3 @@ VALUES
 MERGE INTO tenant_modules (tenant_id, module_id, plan_type) KEY(tenant_id, module_id)
 VALUES (1, 1, 'free');
 
-MERGE INTO user_modules (user_id, module_id) KEY(user_id, module_id)
-VALUES
-(1, 1),
-(1, 2);
