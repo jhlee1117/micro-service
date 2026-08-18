@@ -1,4 +1,4 @@
-# 📑 테넌트 관리 이벤트 아키텍처 설계서 (EDA)
+﻿# 📑 테넌트 관리 이벤트 아키텍처 설계서 (EDA)
 
 ## 1. 개요 (Overview)
 본 문서는 `auth-service`에서 테넌트 생성 시 발생하는 이벤트를 비동기적으로 처리하여, 실제 데이터베이스의 물리적 스키마 생성 및 초기화를 자동화하기 위한 메시징 구조를 정의합니다.
@@ -184,7 +184,7 @@ public class RabbitMQConfig {
 
         // auth-service의 이벤트 클래스명을 워커의 이벤트 클래스와 강제 매핑
         Map<String, Class<?>> isClassMapping = new HashMap<>();
-        isClassMapping.put("com.microservices.auth_service.event.TenantCreatedEvent", TenantCreatedEvent.class);
+        isClassMapping.put("com.microservices.auth.event.TenantCreatedEvent", TenantCreatedEvent.class);
 
         classMapper.setIdClassMapping(isClassMapping);
         converter.setClassMapper(classMapper);

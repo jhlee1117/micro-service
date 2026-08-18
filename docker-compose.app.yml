@@ -1,0 +1,79 @@
+services:
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8081
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://service-discovery:8761/eureka/
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      DB_URL: jdbc:postgresql://postgres:5432/micro_db
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      JWT_SECRET: this-is-a-very-secure-key-and-is-longer-than-32-characters
+      JWT_EXPIRATION: 3600000
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  board-service:
+    build: ./board-service
+    container_name: board-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://service-discovery:8761/eureka/
+      REDIS_HOST: redis
+      DB_URL: jdbc:postgresql://postgres:5432/micro_db
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      JWT_SECRET: this-is-a-very-secure-key-and-is-longer-than-32-characters
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  tenant-provisioning-worker:
+    build: ./tenant-provisioning-worker
+    container_name: tenant-provisioning-worker
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8083
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://service-discovery:8761/eureka/
+      RABBITMQ_HOST: rabbitmq
+      DB_URL: jdbc:postgresql://postgres:5432/micro_db
+      DB_USERNAME: user
+      DB_PASSWORD: password
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8070:8070"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8070
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://service-discovery:8761/eureka/
+      REDIS_HOST: redis
+      JWT_SECRET: this-is-a-very-secure-key-and-is-longer-than-32-characters
+      JWT_EXPIRATION: 3600000
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+networks:
+  microservices-network:
+    external: true
