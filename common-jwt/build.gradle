@@ -22,19 +22,16 @@ repositories {
 }
 
 dependencies {
-    // JUnit 테스트 의존성
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-    
-    // JJWT 의존성 
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     testRuntimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-    // Spring 관련 의존성 (compileOnly - 컴파일만 필요, 런타임엔 사용하는 프로젝트에서 제공)
     compileOnly 'org.springframework:spring-webflux:6.1.0'
     compileOnly 'org.springframework:spring-web:6.1.0'
     compileOnly 'org.springframework.security:spring-security-core:6.2.0'
@@ -42,15 +39,12 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
     compileOnly 'io.projectreactor:reactor-core:3.6.0'
 
-    // 로깅
     implementation 'org.slf4j:slf4j-api:2.0.16'
-    
-    // Lombok
+
     implementation 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
 }
 
-// JAR 파일 생성 설정 (ShadowJar 제거)
 jar {
     enabled = true
     archiveClassifier = ''
