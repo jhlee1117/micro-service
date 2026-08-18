@@ -22,15 +22,14 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // Lombok
     implementation 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
 }
 
-// JAR 파일 생성 설정
 jar {
     enabled = true
     archiveClassifier = ''
