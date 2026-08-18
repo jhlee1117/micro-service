@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS permissions (
     id BIGSERIAL PRIMARY KEY,
-    module_id BIGINT NOT NULL,
     code VARCHAR(150) NOT NULL UNIQUE,
     resource VARCHAR(100) NOT NULL,
     action VARCHAR(50) NOT NULL,
@@ -8,8 +7,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     created_by VARCHAR(50),
-    updated_by VARCHAR(50),
-    FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+    updated_by VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS role_permissions (

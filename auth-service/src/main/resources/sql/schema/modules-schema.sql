@@ -44,18 +44,3 @@ CREATE TABLE IF NOT EXISTS tenant_modules (
     FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE,
     FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
 );
--- 사용자별 모듈 접근 권한
-CREATE TABLE IF NOT EXISTS user_modules (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    module_id BIGINT NOT NULL,
-    role VARCHAR(50), -- 예: admin, user, viewer
-    enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    created_by VARCHAR(50),
-    updated_by VARCHAR(50),
-    UNIQUE (user_id, module_id),
-    FOREIGN KEY (user_id) REFERENCES appuser(id) ON DELETE CASCADE,
-    FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
-);

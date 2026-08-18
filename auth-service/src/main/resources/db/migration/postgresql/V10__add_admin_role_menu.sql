@@ -1,5 +1,5 @@
-MERGE INTO permissions (code, resource, action, description) KEY(code)
-VALUES ('SYSTEM_MANAGEMENT_MENU_VIEW', 'SYSTEM_MANAGEMENT', 'MENU_VIEW', 'View system management menus');
+MERGE INTO permissions (module_id, code, resource, action, description) KEY(code)
+VALUES (1, 'SYSTEM_MANAGEMENT_MENU_VIEW', 'SYSTEM_MANAGEMENT', 'MENU_VIEW', 'View system management menus');
 
 MERGE INTO role_permissions (role_id, permission_id) KEY(role_id, permission_id)
 SELECT r.id, p.id
@@ -11,4 +11,4 @@ MERGE INTO menu_permissions (menu_code, permission_id) KEY(menu_code, permission
 SELECT m.menu_code, p.id
 FROM menus m
 JOIN permissions p ON p.code = 'SYSTEM_MANAGEMENT_MENU_VIEW'
-WHERE m.menu_code IN ('S1', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16');
+WHERE m.menu_code IN ('S1', 'S11', 'S12', 'S13');
