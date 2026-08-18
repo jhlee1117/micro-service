@@ -22,3 +22,7 @@ bin/
 # local cleanup archive
 /archive/
 *.bkp
+
+# editor lock/backup files
+.LCK*
+*~
