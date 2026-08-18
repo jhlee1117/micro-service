@@ -18,3 +18,7 @@ bin/
 # logs
 /logs
 *.log
+
+# local cleanup archive
+/archive/
+*.bkp

@@ -9,7 +9,7 @@
 
 ## 2. TO-BE 통합 아키텍처 (Docker Compose)
 
-![MSA Architecture Diagram](./architecture_docker_compose.png)
+![MSA Architecture Diagram](../architecture/architecture_docker_compose.png)
 *(💡 작성자 노트: 여기에 `architecture_docker_compose.drawio` 파일에서 추출한 이미지를 삽입하세요)*
 
 위 아키텍처에서 볼 수 있듯, 모든 MSA 컴포넌트는 `micro-service_microservices-network`라는 Docker Bridge 네트워크를 통해 상호 통신합니다. 외부 클라이언트 요청은 `API Gateway`를 거쳐 라우팅되며, 각 서비스는 시작 시 외부의 `Config Server` 컨테이너에 접근하여 GitHub에 저장된 최신 환경 변수를 로드합니다.

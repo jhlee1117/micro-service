@@ -1,9 +1,4 @@
----
-name: add-new-service
-description: Spring Cloud MSA 프로젝트에 새로운 Spring Boot 서비스를 추가합니다. 디렉토리 구조 생성, Gradle 등록, Dockerfile 작성, docker-compose.yml 업데이트를 포함한 전체 과정을 자동화합니다.
----
-
-# Skill: Add New MSA Service
+# Add New MSA Service Guide
 
 이 스킬은 프로젝트의 표준 아키텍처(Java 17, Spring Boot 3.4.5, Docker Alpine)에 맞는 새로운 마이크로서비스 모듈을 생성합니다.
 
@@ -52,7 +47,7 @@ eureka:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
 ```
 
-## Instructions for Agent
+## Agent Checklist
 1. 사용자가 서비스 이름과 포트 번호를 입력하면 위 절차에 따라 파일을 생성하십시오.
 2. 모든 파일 생성 후 `./gradlew build -x test`를 실행하여 빌드 성공 여부를 확인하십시오.
 3. 마지막으로 `docker-compose.yml`에 서비스가 올바르게 추가되었는지 검증하십시오.

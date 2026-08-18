@@ -1,0 +1,35 @@
+[mcp_servers.drawio]
+command = "cmd"
+args = ["/c", "npx", "-y", "@drawio/mcp"]
+enabled = true
+required = false
+startup_timeout_sec = 30
+
+[mcp_servers.github]
+command = "docker"
+args = [
+  "run",
+  "-i",
+  "--rm",
+  "-e",
+  "GITHUB_PERSONAL_ACCESS_TOKEN",
+  "-e",
+  "GITHUB_TOOLSETS=default,repos,issues,pull_requests,actions",
+  "ghcr.io/github/github-mcp-server",
+]
+enabled = true
+required = false
+startup_timeout_sec = 30
+
+[mcp_servers.postgres]
+command = "cmd"
+args = [
+  "/c",
+  "npx",
+  "-y",
+  "@modelcontextprotocol/server-postgres",
+  "postgresql://user:password@localhost:5432/micro_db",
+]
+enabled = true
+required = false
+startup_timeout_sec = 30
