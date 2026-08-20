@@ -1,6 +1,8 @@
 package com.microservices.auth.controller;
 
 import com.microservices.auth.dto.TenantDto;
+import com.microservices.auth.dto.TenantModuleAssignmentsRequest;
+import com.microservices.auth.dto.TenantModulesAssignmentDto;
 import com.microservices.auth.service.TenantService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -49,5 +51,16 @@ public class TenantController {
   public ResponseEntity<Void> deleteTenant(@PathVariable("id") Long id) {
     tenantService.deleteTenant(id);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{id}/modules")
+  public ResponseEntity<TenantModulesAssignmentDto> getTenantModules(@PathVariable("id") Long id) {
+    return ResponseEntity.ok(tenantService.getTenantModules(id));
+  }
+
+  @PutMapping("/{id}/modules")
+  public ResponseEntity<TenantModulesAssignmentDto> updateTenantModules(
+      @PathVariable("id") Long id, @RequestBody TenantModuleAssignmentsRequest request) {
+    return ResponseEntity.ok(tenantService.updateTenantModules(id, request));
   }
 }

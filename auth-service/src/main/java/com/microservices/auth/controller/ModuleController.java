@@ -1,6 +1,8 @@
 package com.microservices.auth.controller;
 
 import com.microservices.auth.dto.ModuleDto;
+import com.microservices.auth.dto.ModuleTenantsAssignmentDto;
+import com.microservices.auth.dto.TenantModuleAssignmentsRequest;
 import com.microservices.auth.service.ModuleService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/module")
+@RequestMapping({"/module", "/modules"})
 @RequiredArgsConstructor
 @Tag(name = "Module API", description = "모듈 API 문서")
 public class ModuleController {
@@ -48,5 +50,16 @@ public class ModuleController {
   public ResponseEntity<Void> deleteModule(@PathVariable("id") Long id) {
     moduleService.deleteModule(id);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{id}/tenants")
+  public ResponseEntity<ModuleTenantsAssignmentDto> getModuleTenants(@PathVariable("id") Long id) {
+    return ResponseEntity.ok(moduleService.getModuleTenants(id));
+  }
+
+  @PutMapping("/{id}/tenants")
+  public ResponseEntity<ModuleTenantsAssignmentDto> updateModuleTenants(
+      @PathVariable("id") Long id, @RequestBody TenantModuleAssignmentsRequest request) {
+    return ResponseEntity.ok(moduleService.updateModuleTenants(id, request));
   }
 }

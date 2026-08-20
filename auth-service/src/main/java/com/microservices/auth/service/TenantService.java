@@ -1,13 +1,22 @@
 package com.microservices.auth.service;
 
 import com.common.exceptions.BusinessException;
+import com.common.exceptions.code.ModuleErrorCode;
 import com.common.exceptions.code.TenantErrorCode;
+import com.microservices.auth.domain.entity.Module;
 import com.microservices.auth.domain.entity.Tenant;
+import com.microservices.auth.domain.entity.TenantModule;
 import com.microservices.auth.dto.TenantDto;
+import com.microservices.auth.dto.TenantModuleAssignmentDto;
+import com.microservices.auth.dto.TenantModuleAssignmentsRequest;
+import com.microservices.auth.dto.TenantModulesAssignmentDto;
 import com.microservices.auth.event.TenantCreatedEvent;
 import com.microservices.auth.event.TenantDroppedEvent;
+import com.microservices.auth.repository.ModuleRepository;
+import com.microservices.auth.repository.TenantModuleRepository;
 import com.microservices.auth.repository.TenantRepository;
 import com.microservices.auth.repository.UserRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +35,10 @@ public class TenantService {
   private final Logger logger = LoggerFactory.getLogger(TenantService.class);
 
   @Autowired TenantRepository tenantRepository;
+
+  @Autowired ModuleRepository moduleRepository;
+
+  @Autowired TenantModuleRepository tenantModuleRepository;
 
   @Autowired UserRepository userRepository;
 
@@ -115,5 +128,69 @@ public class TenantService {
     tenantRepository.deleteById(existingTenant.getId());
 
     eventPublisher.publishEvent(new TenantDroppedEvent(existingTenant));
+  }
+
+  @Transactional(readOnly = true)
+  public TenantModulesAssignmentDto getTenantModules(Long tenantId) {
+    Tenant tenant = findTenant(tenantId);
+    List<TenantModuleAssignmentDto> assignments =
+        tenantModuleRepository.findAllByTenantOrderByModuleId(tenant).stream()
+            .map(TenantModuleAssignmentDto::fromEntity)
+            .toList();
+
+    return new TenantModulesAssignmentDto(tenant.getId(), assignments);
+  }
+
+  @Transactional
+  public TenantModulesAssignmentDto updateTenantModules(
+      Long tenantId, TenantModuleAssignmentsRequest request) {
+    Tenant tenant = findTenant(tenantId);
+    List<TenantModuleAssignmentDto> assignments = normalizeAssignments(request);
+
+    tenantModuleRepository.deleteByTenant(tenant);
+    tenantModuleRepository.flush();
+
+    List<TenantModule> tenantModules =
+        assignments.stream().map(assignment -> createTenantModule(tenant, assignment)).toList();
+    tenantModuleRepository.saveAll(tenantModules);
+
+    return new TenantModulesAssignmentDto(
+        tenant.getId(), tenantModules.stream().map(TenantModuleAssignmentDto::fromEntity).toList());
+  }
+
+  private Tenant findTenant(Long tenantId) {
+    return tenantRepository
+        .findById(tenantId)
+        .orElseThrow(() -> new BusinessException(TenantErrorCode.TENANT_NOT_FOUND));
+  }
+
+  private TenantModule createTenantModule(Tenant tenant, TenantModuleAssignmentDto assignment) {
+    Module module =
+        moduleRepository
+            .findById(assignment.moduleId())
+            .orElseThrow(() -> new BusinessException(ModuleErrorCode.MODULE_NOT_FOUND));
+
+    TenantModule tenantModule = new TenantModule();
+    tenantModule.setTenant(tenant);
+    tenantModule.setModule(module);
+    tenantModule.setPlanType(assignment.planType());
+    tenantModule.setEnabled(assignment.enabled());
+    return tenantModule;
+  }
+
+  private List<TenantModuleAssignmentDto> normalizeAssignments(
+      TenantModuleAssignmentsRequest request) {
+    List<TenantModuleAssignmentDto> assignments =
+        request == null || request.assignments() == null ? List.of() : request.assignments();
+    Map<Long, TenantModuleAssignmentDto> uniqueAssignments = new LinkedHashMap<>();
+
+    for (TenantModuleAssignmentDto assignment : assignments) {
+      if (assignment.moduleId() == null) {
+        throw new BusinessException(ModuleErrorCode.MODULE_NOT_FOUND);
+      }
+      uniqueAssignments.put(assignment.moduleId(), assignment);
+    }
+
+    return List.copyOf(uniqueAssignments.values());
   }
 }
