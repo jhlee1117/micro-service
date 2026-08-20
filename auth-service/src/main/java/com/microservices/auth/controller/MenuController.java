@@ -1,6 +1,8 @@
 package com.microservices.auth.controller;
 
 import com.microservices.auth.dto.MenuDto;
+import com.microservices.auth.dto.MenuPermissionAssignmentDto;
+import com.microservices.auth.dto.PermissionAssignmentRequest;
 import com.microservices.auth.service.MenuService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -48,5 +50,17 @@ public class MenuController {
   public ResponseEntity<Void> deleteMenu(@PathVariable("menuCode") String menuCode) {
     menuService.deleteMenu(menuCode);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{menuCode}/permissions")
+  public ResponseEntity<MenuPermissionAssignmentDto> getMenuPermissions(
+      @PathVariable("menuCode") String menuCode) {
+    return ResponseEntity.ok(menuService.getMenuPermissions(menuCode));
+  }
+
+  @PutMapping("/{menuCode}/permissions")
+  public ResponseEntity<MenuPermissionAssignmentDto> updateMenuPermissions(
+      @PathVariable("menuCode") String menuCode, @RequestBody PermissionAssignmentRequest request) {
+    return ResponseEntity.ok(menuService.updateMenuPermissions(menuCode, request));
   }
 }
