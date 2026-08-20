@@ -1,6 +1,8 @@
 package com.microservices.auth.controller;
 
+import com.microservices.auth.dto.PermissionAssignmentRequest;
 import com.microservices.auth.dto.RoleDto;
+import com.microservices.auth.dto.RolePermissionAssignmentDto;
 import com.microservices.auth.service.RoleService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/role")
+@RequestMapping({"/role", "/roles"})
 @Tag(name = "Role API", description = "역할 API 문서")
 public class RoleController {
 
@@ -50,5 +52,17 @@ public class RoleController {
     String username = authentication.getName();
     roleService.deleteRole(roleId, username);
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{roleId}/permissions")
+  public ResponseEntity<RolePermissionAssignmentDto> getRolePermissions(
+      @PathVariable("roleId") Long roleId) {
+    return ResponseEntity.ok(roleService.getRolePermissions(roleId));
+  }
+
+  @PutMapping("/{roleId}/permissions")
+  public ResponseEntity<RolePermissionAssignmentDto> updateRolePermissions(
+      @PathVariable("roleId") Long roleId, @RequestBody PermissionAssignmentRequest request) {
+    return ResponseEntity.ok(roleService.updateRolePermissions(roleId, request));
   }
 }
