@@ -54,6 +54,8 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 app:
+  security:
+    public-dev-endpoints: true
   cookie:
     domain: localhost
     secure: false

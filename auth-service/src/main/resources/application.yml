@@ -8,13 +8,6 @@ spring:
   web:
     resources:
       add-mappings: false
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
 
 server:
   port: 8081
@@ -29,7 +22,7 @@ springdoc:
     configUrl: /v3/api-docs/swagger-config
 
 jwt:
-  secret: override-from-config-server
+  secret: ${JWT_SECRET:local-dev-jwt-secret-change-before-deploy-32chars}
   expiration: 3600000
   refresh-expiration: 604800000
 

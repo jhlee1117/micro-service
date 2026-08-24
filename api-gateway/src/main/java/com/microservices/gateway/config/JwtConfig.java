@@ -37,8 +37,7 @@ public class JwtConfig {
   public JwtTokenProvider jwtTokenProvider() {
     logger.info("API Gateway - accessTokenExpirationTime: {}", accessTokenExpirationTime);
     logger.info("API Gateway - refreshTokenExpirationTime: {}", refreshTokenExpirationTime);
-    logger.info("API Gateway - secretKeyString: '{}'", secretKeyString);
-    logger.info("API Gateway - secretKeyString 길이: {}", secretKeyString.length());
+    logger.info("API Gateway - JWT secret configured. length: {}", secretKeyString.length());
 
     return new JwtTokenProvider(
         secretKeyString, accessTokenExpirationTime, refreshTokenExpirationTime);

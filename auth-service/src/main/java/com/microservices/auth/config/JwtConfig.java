@@ -12,7 +12,7 @@ public class JwtConfig {
 
   private static final Logger log = LoggerFactory.getLogger(JwtConfig.class);
 
-  @Value("${jwt.secret:defaultSecretKey}")
+  @Value("${jwt.secret}")
   private String jwtSecret;
 
   @Value("${jwt.expiration:3600000}") // 기본값: 1시간 (밀리초)
@@ -23,8 +23,7 @@ public class JwtConfig {
 
   @Bean
   public JwtTokenProvider jwtTokenProvider() {
-    log.info("Auth Service - jwtSecret: '{}'", jwtSecret);
-    log.info("Auth Service - jwtSecret 길이: {}", jwtSecret.length());
+    log.info("Auth Service - JWT secret configured. length: {}", jwtSecret.length());
 
     return new JwtTokenProvider(jwtSecret, jwtExpiration, jwtRefreshExpiration);
   }

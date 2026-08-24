@@ -20,7 +20,7 @@ server:
   port: 8070
 
 jwt:
-  secret: override-from-config-server
+  secret: ${JWT_SECRET:local-dev-jwt-secret-change-before-deploy-32chars}
   access-token-expire-time: 3600000
   refresh-token-expire-time: 604800000
   secret-key-algorithm: HS256

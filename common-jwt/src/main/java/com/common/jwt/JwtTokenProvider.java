@@ -103,7 +103,6 @@ public class JwtTokenProvider {
   public TokenValidationResult validateTokenWithResult(String token) {
     try {
       log.debug("Validating token with secret key algorithm: {}", actualSecretKey.getAlgorithm());
-      log.debug("Token to validate: {}", token);
 
       Jwts.parser().verifyWith(actualSecretKey).build().parseSignedClaims(token);
 

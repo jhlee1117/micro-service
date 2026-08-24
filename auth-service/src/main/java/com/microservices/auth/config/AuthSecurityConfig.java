@@ -10,6 +10,7 @@ import com.microservices.auth.security.CustomAuthenticationEntryPoint;
 import com.microservices.auth.security.redis.AuthRedisService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -49,6 +50,9 @@ public class AuthSecurityConfig {
 
   @Autowired private ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository;
 
+  @Value("${app.security.public-dev-endpoints:false}")
+  private boolean publicDevelopmentEndpoints;
+
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     ServletJwtAuthenticationFilter jwtAuthenticationFilter =
@@ -60,7 +64,7 @@ public class AuthSecurityConfig {
             .sessionManagement(
                 session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(
-                auth ->
+                auth -> {
                     auth.requestMatchers(
                             "/auth/login",
                             "/auth/register",
@@ -69,19 +73,25 @@ public class AuthSecurityConfig {
                             "/auth/oauth/signup/complete",
                             "/oauth2/**",
                             "/login/oauth2/**")
-                        .permitAll()
-                        .requestMatchers("/actuator/**", "/h2-console/**")
-                        .permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html")
-                        .permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-resources/**")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated())
+                        .permitAll();
+
+                    if (publicDevelopmentEndpoints) {
+                      auth.requestMatchers("/actuator/**", "/h2-console/**")
+                          .permitAll()
+                          .requestMatchers("/swagger-ui/**", "/swagger-ui.html")
+                          .permitAll()
+                          .requestMatchers("/v3/api-docs/**", "/swagger-resources/**")
+                          .permitAll();
+                    }
+
+                    auth.anyRequest().authenticated();
+                  })
             .headers(
-                headers ->
+                headers -> {
+                  headers.frameOptions(frame -> frame.sameOrigin());
+
+                  if (publicDevelopmentEndpoints) {
                     headers
-                        .frameOptions(frame -> frame.sameOrigin())
                         .addHeaderWriter(
                             new DelegatingRequestMatcherHeaderWriter(
                                 new AntPathRequestMatcher("/actuator/**"),
@@ -89,7 +99,9 @@ public class AuthSecurityConfig {
                         .addHeaderWriter(
                             new DelegatingRequestMatcherHeaderWriter(
                                 new AntPathRequestMatcher("/h2-console/**"),
-                                new StaticHeadersWriter("X-Frame-Options", ""))))
+                                new StaticHeadersWriter("X-Frame-Options", "")));
+                  }
+                })
             .exceptionHandling(
                 ex ->
                     ex.authenticationEntryPoint(customAuthenticationEntryPoint)
