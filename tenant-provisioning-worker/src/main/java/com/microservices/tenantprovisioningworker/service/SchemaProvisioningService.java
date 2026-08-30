@@ -1,5 +1,6 @@
 package com.microservices.tenantprovisioningworker.service;
 
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,20 +12,21 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SchemaProvisioningService {
 
-  private final JdbcTemplate jdbcTemplate;
+  private final Map<String, JdbcTemplate> shardJdbcTemplates;
 
   @Transactional
-  public void createTenantSchema(String tenantName) {
-    log.info("Starting schema provisioning for tenant: {}", tenantName);
+  public void createTenantSchema(String tenantName, String shardKey) {
+    log.info("Starting schema provisioning for tenant: {} on shard: {}", tenantName, shardKey);
 
     // 1. 보안 검증
     checkTenantName(tenantName);
+    JdbcTemplate jdbcTemplate = resolveJdbcTemplate(shardKey);
 
     // 2. 스키마 생성 쿼리 실행
     String createSchemaQuery = "CREATE SCHEMA IF NOT EXISTS " + tenantName;
     jdbcTemplate.execute(createSchemaQuery);
 
-    log.info("Successfully created schema: {}", tenantName);
+    log.info("Successfully created schema: {} on shard: {}", tenantName, shardKey);
   }
 
   private static void checkTenantName(String tenantName) {
@@ -33,17 +35,26 @@ public class SchemaProvisioningService {
     }
   }
 
+  private JdbcTemplate resolveJdbcTemplate(String shardKey) {
+    JdbcTemplate jdbcTemplate = shardJdbcTemplates.get(shardKey);
+    if (jdbcTemplate == null) {
+      throw new IllegalStateException("Unknown shard key: " + shardKey);
+    }
+    return jdbcTemplate;
+  }
+
   @Transactional
-  public void dropTenantSchema(String tenantName) {
-    log.info("Deleting schema provisioning for tenant: {}", tenantName);
+  public void dropTenantSchema(String tenantName, String shardKey) {
+    log.info("Deleting schema provisioning for tenant: {} on shard: {}", tenantName, shardKey);
 
     // 1. 보안 검증
     checkTenantName(tenantName);
+    JdbcTemplate jdbcTemplate = resolveJdbcTemplate(shardKey);
 
     // 2. 스키마 삭제 쿼리 실행
     String dropSchemaQuery = "DROP SCHEMA IF EXISTS " + tenantName + " CASCADE ";
     jdbcTemplate.execute(dropSchemaQuery);
 
-    log.info("Successfully deleted schema: {}", tenantName);
+    log.info("Successfully deleted schema: {} on shard: {}", tenantName, shardKey);
   }
 }

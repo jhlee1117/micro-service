@@ -1,5 +1,6 @@
 package com.microservices.tenantprovisioningworker.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -117,6 +118,8 @@ public class RabbitMQConfig {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.registerModule(new JavaTimeModule());
     objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    // 롤링 배포 중 발행자/구독자의 이벤트 필드가 잠시 어긋나도 메시지 처리가 끊기지 않도록 허용
+    objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     final Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter(objectMapper);
 

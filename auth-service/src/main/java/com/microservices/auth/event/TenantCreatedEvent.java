@@ -17,6 +17,7 @@ public class TenantCreatedEvent {
   private String eventId;
   private Long tenantId;
   private String tenantName;
+  private String shardKey;
   private LocalDateTime timestamp;
 
   // 생성자
@@ -24,6 +25,7 @@ public class TenantCreatedEvent {
     this.eventId = UUID.randomUUID().toString();
     this.tenantId = savedTenant.getId();
     this.tenantName = savedTenant.getName();
+    this.shardKey = savedTenant.getShardKey();
     this.timestamp = LocalDateTime.now();
   }
 }

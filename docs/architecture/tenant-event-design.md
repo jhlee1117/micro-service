@@ -111,12 +111,14 @@ public class TenantCreatedEvent {
     private String eventId;
     private Long tenantId;
     private String tenantName;
+    private String shardKey; // 테넌트 스키마가 배치될 물리 DB(db_instance.shard_key)
     private LocalDateTime timestamp;
 
     public TenantCreatedEvent(Tenant savedTenant) {
         this.eventId = UUID.randomUUID().toString();
         this.tenantId = savedTenant.getId();
         this.tenantName = savedTenant.getName();
+        this.shardKey = savedTenant.getShardKey();
         this.timestamp = LocalDateTime.now();
     }
 }
@@ -204,29 +206,33 @@ public class RabbitMQConfig {
 ```
 
 ### 8.3 비즈니스 로직 (SchemaProvisioningService.java)
-전달받은 테넌트명을 사용하여 실제 데이터베이스에 DDL(Data Definition Language) 쿼리를 실행합니다. SQL 인젝션을 방지하기 위한 정규식 검증이 포함되어 있습니다.
+전달받은 테넌트명을 사용하여 실제 데이터베이스에 DDL(Data Definition Language) 쿼리를 실행합니다. SQL 인젝션을 방지하기 위한 정규식 검증이 포함되어 있습니다. `shardKey`로 여러 물리 DB(shard) 중 어디에 스키마를 만들지 선택하며, `shard-1`은 이 서비스의 기본 `spring.datasource`를 그대로 쓰고 그 외 shard는 `provisioning.shards` 설정으로 늘어난다.
 ```java
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SchemaProvisioningService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final Map<String, JdbcTemplate> shardJdbcTemplates;
 
     @Transactional
-    public void createTenantSchema(String tenantName) {
-        log.info("Starting schema provisioning for tenant: {}", tenantName);
+    public void createTenantSchema(String tenantName, String shardKey) {
+        log.info("Starting schema provisioning for tenant: {} on shard: {}", tenantName, shardKey);
 
         // 1. 보안 검증 (SQL 인젝션 방지)
         if (!tenantName.matches("^[a-zA-Z0-9_]+$")) {
             throw new IllegalArgumentException("Invalid tenant name format: " + tenantName);
         }
 
-        // 2. 스키마 생성 쿼리 실행
+        // 2. shard 라우팅 후 스키마 생성 쿼리 실행
+        JdbcTemplate jdbcTemplate = shardJdbcTemplates.get(shardKey);
+        if (jdbcTemplate == null) {
+            throw new IllegalStateException("Unknown shard key: " + shardKey);
+        }
         String createSchemaQuery = "CREATE SCHEMA IF NOT EXISTS " + tenantName;
         jdbcTemplate.execute(createSchemaQuery);
 
-        log.info("Successfully created schema: {}", tenantName);
+        log.info("Successfully created schema: {} on shard: {}", tenantName, shardKey);
     }
 }
 ```
@@ -246,7 +252,7 @@ public class TenantEventListener {
         log.info("Received TenantCreatedEvent: {}", event);
 
         try {
-            schemaProvisioningService.createTenantSchema(event.getTenantName());
+            schemaProvisioningService.createTenantSchema(event.getTenantName(), event.getShardKey());
             log.info("Finished processing for event: {}", event.getEventId());
         } catch (Exception e) {
             log.error("Failed to provision schema for tenant: {}. Error: {}", event.getTenantName(), e.getMessage());
