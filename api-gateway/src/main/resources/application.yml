@@ -9,7 +9,7 @@ spring:
       - id: auth-service
         uri: lb://auth-service
         predicates:
-          - Path=/auth/**, /user/**, /secure/**, /role/**, /tenant/**, /oauth2/**, /login/oauth2/**, /menus/**, /module/**, /permission/**
+          - Path=/auth/**, /user/**, /secure/**, /role/**, /roles/**, /tenant/**, /oauth2/**, /login/oauth2/**, /menus/**, /module/**, /permission/**
       - id: board-service
         uri: lb://board-service
         predicates:
