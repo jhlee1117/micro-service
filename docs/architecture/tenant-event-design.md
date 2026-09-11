@@ -13,7 +13,8 @@
 
 | 이벤트 종류 (Routing Key) | 전담 큐 (Queue Name) | 목적 (Purpose) |
 | :--- | :--- | :--- |
-| `tenant.created` | `tenant.schema-create.queue` | 새 테넌트용 DB 스키마 및 기본 테이블 생성 |
+| `tenant.created` | `tenant.schema-create.queue` | 새 테넌트용 DB 스키마 생성 (`CREATE SCHEMA`) |
+| `tenant.created` | `board.tenant.schema-create.queue` | 새 테넌트 스키마 안에 `board-service` 소유 테이블(`boards`) 생성 (Flyway) |
 | `tenant.created` | `tenant.welcome-mail.queue` | (확장 예정) 가입 환영 메일 발송 |
 | `tenant.deleted` | `tenant.schema-delete.queue` | (확장 예정) 테넌트 탈퇴 시 데이터 백업 및 삭제 |
 | `tenant.updated` | `tenant.cache-refresh.queue` | (확장 예정) 테넌트 정보 변경 시 전역 캐시 갱신 |
@@ -44,9 +45,12 @@
 2.  **RabbitMQ (Broker):**
     *   `topic` 매칭 규칙에 따라 메시지를 `tenant.schema-create.queue`로 전달합니다.
 3.  **Schema Worker (Consumer):**
-    *   큐에서 메시지를 수신합니다.
-    *   `CREATE SCHEMA company_alpha;` 명령 및 초기 DDL 스크립트를 실행합니다.
+    *   `tenant.schema-create.queue`에서 메시지를 수신합니다.
+    *   `CREATE SCHEMA company_alpha;` 명령을 실행합니다.
     *   작업 완료 시 `tenant.provisioning.completed` 이벤트를 다시 발행합니다.
+3-1. **Board Service (Consumer, 독립 구독자):**
+    *   같은 `tenant.created` 이벤트를 `board.tenant.schema-create.queue`로 별도 수신합니다(topic exchange의 fan-out 특성 활용, Schema Worker와 순서 의존성 없음).
+    *   `boards` 테이블 DDL을 담은 Flyway 마이그레이션을 새 테넌트 스키마(`schemas(tenantSchema)`)에 대해 실행합니다. Flyway가 대상 스키마를 없으면 직접 만들기 때문에 Schema Worker의 `CREATE SCHEMA IF NOT EXISTS`와 순서가 엇갈려도 멱등하게 동작합니다.
 4.  **Auth Service (Subscriber):**
     *   완료 이벤트를 수신하여 해당 테넌트의 상태를 `ACTIVE`로 변경합니다.
 
@@ -261,3 +265,76 @@ public class TenantEventListener {
     }
 }
 ```
+
+---
+
+## 9. 구현 상세 (Implementation Details) - Subscriber (board-service)
+
+`tenant-provisioning-worker`가 물리적으로 스키마(네임스페이스)만 만드는 것과 달리, `board-service`는 자신이 소유한 테이블(`boards`)을 그 스키마 **안에** 실제로 만들어야 한다. 이를 위해 같은 `tenant.created` 이벤트를 독립적으로 한 번 더 구독한다.
+
+### 9.1 의존성 (build.gradle)
+```gradle
+implementation 'org.springframework.boot:spring-boot-starter-amqp'
+implementation 'org.flywaydb:flyway-core'
+runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+```
+
+### 9.2 커스텀 설정 (RabbitMQConfig.java)
+`tenant-provisioning-worker`와 동일하게, 발행자(`auth-service`)와 패키지 경로가 다른 이벤트 클래스를 매핑하기 위해 `DefaultClassMapper`를 사용한다. 전용 큐(`board.tenant.schema-create.queue`)와 DLQ를 별도로 두어, Schema Worker 쪽 처리와 서로 영향을 주지 않는다.
+```java
+@Configuration
+public class RabbitMQConfig {
+    public static final String BOARD_SCHEMA_QUEUE = "board.tenant.schema-create.queue";
+
+    @Bean
+    public MessageConverter jackson2JsonMessageConverter() {
+        DefaultClassMapper classMapper = new DefaultClassMapper();
+        classMapper.setTrustedPackages("com.microservices.auth.event", "com.microservices.board.event");
+
+        Map<String, Class<?>> idClassMapping = new HashMap<>();
+        idClassMapping.put("com.microservices.auth.event.TenantCreatedEvent", TenantCreatedEvent.class);
+        classMapper.setIdClassMapping(idClassMapping);
+
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        converter.setClassMapper(classMapper);
+        return converter;
+    }
+}
+```
+
+### 9.3 마이그레이션 서비스 (BoardSchemaMigrationService.java)
+Spring Boot의 자동 Flyway 실행(`spring.flyway.enabled`)은 애플리케이션 시작 시 고정된 스키마 하나만 마이그레이션하므로, 스키마-당-테넌트 구조에는 맞지 않는다. 대신 이벤트를 받을 때마다 대상 스키마를 지정해 Flyway를 직접 실행한다. 스키마명은 `tenant-provisioning-worker`와 동일한 정규식(`^[a-zA-Z0-9_]+$`)으로 검증해 SQL 인젝션을 막는다.
+```java
+@Service
+@RequiredArgsConstructor
+public class BoardSchemaMigrationService {
+    private final DataSource dataSource;
+
+    public void migrate(String tenantSchema) {
+        // tenantSchema 검증 후...
+        Flyway.configure()
+            .dataSource(dataSource)
+            .schemas(tenantSchema)
+            .locations("classpath:db/migration/board")
+            .baselineOnMigrate(true)
+            .load()
+            .migrate();
+    }
+}
+```
+
+### 9.4 메시지 리스너 (TenantSchemaEventListener.java)
+```java
+@Component
+@RequiredArgsConstructor
+public class TenantSchemaEventListener {
+    private final BoardSchemaMigrationService boardSchemaMigrationService;
+
+    @RabbitListener(queues = RabbitMQConfig.BOARD_SCHEMA_QUEUE)
+    public void onTenantCreated(TenantCreatedEvent event) {
+        boardSchemaMigrationService.migrate(event.getTenantName());
+    }
+}
+```
+
+이 흐름이 끝나야 비로소 새 테넌트로 로그인한 사용자가 `board-service`에 실제로 접근할 수 있다 — 스키마만 있고 테이블이 없으면 Hibernate가 `search_path`를 그 스키마로 돌려도 조회/저장에 실패한다. 스키마 전환 자체(Hibernate `CurrentTenantIdentifierResolver`/`MultiTenantConnectionProvider`)는 이 문서의 범위가 아니며 [tenant-schema-routing.md](tenant-schema-routing.md)에서 다룬다.

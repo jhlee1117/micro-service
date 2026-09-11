@@ -60,6 +60,25 @@ module already uses that pattern.
 - `repository` must not depend on `controller` or `service`.
 - `domain` must not depend on `controller`, `service`, `repository`, or `dto`.
 - `service` must not depend on `controller`.
+- `event` (tenant lifecycle event DTOs, e.g. `TenantCreatedEvent`) must not depend
+  on any other board-service layer (`controller`, `service`, `repository`,
+  `config`, `listener`, `security`, `tenant`) — it is a pure data carrier shared
+  with `auth-service`'s event of the same name via `RabbitMQConfig`'s
+  `DefaultClassMapper`.
+- `listener` (RabbitMQ `tenant.created` consumer) must not depend on
+  `controller` or `repository`. It may depend on `config` (queue name
+  constants), `event` (the DTO), and `tenant` (to trigger the schema
+  migration) — but nothing in `config` or `event` may depend back on
+  `listener`, since that would form a package cycle (`config` needs `event`
+  for its `Jackson2JsonMessageConverter` class mapping; keeping the listener
+  itself out of `event` and out of `config` avoids the cycle).
+- `tenant` (Hibernate schema multi-tenancy: `TenantIdentifierResolver`,
+  `SchemaMultiTenantConnectionProvider`, `HibernateMultiTenancyConfig`,
+  `BoardSchemaMigrationService`) must not depend on `controller`, `service`, or
+  `repository` — it is a persistence-infrastructure layer, resolved per-request
+  from `TenantContext` (in `common-jwt`), not from the web layer.
+- `security` (`SuperAdminTenantOverrideFilter`) must not depend on
+  `controller`, `service`, or `repository`.
 
 ### tenant-provisioning-worker
 

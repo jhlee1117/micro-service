@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.common.jwt.JwtTokenProvider;
@@ -74,7 +76,8 @@ public class AuthServiceTest {
     when(authentication.getName()).thenReturn("testuser");
     when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(mockUser));
     when(tenantRepository.findById(1L)).thenReturn(Optional.of(mockTenant));
-    when(jwtTokenProvider.generateAccessToken("testuser", "1")).thenReturn("mock-access-token");
+    when(jwtTokenProvider.generateAccessToken(anyString(), anyString(), any(), anyList()))
+        .thenReturn("mock-access-token");
     when(jwtTokenProvider.generateRefreshToken("testuser", "1")).thenReturn("mock-refresh-token");
     when(jwtTokenProvider.getRefreshTokenExpirationTime()).thenReturn(3600L);
 

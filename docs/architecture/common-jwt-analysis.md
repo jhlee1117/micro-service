@@ -27,7 +27,11 @@ Access Token 생성 시 포함되는 값:
 - `sub`: username
 - `iat`: issuedAt
 - `exp`: expiration
-- `tenantId`: tenant 식별자
+- `tenantId`: tenant의 숫자 PK (`Tenant.id`)
+- `tenantSchema`: tenant의 실제 DB 스키마명 (`Tenant.name`). `tenant-provisioning-worker`가
+  `CREATE SCHEMA <tenantName>`으로 만든 스키마와 동일한 값이며, `tenantId`(숫자 PK)와는 다른 값이다.
+  스키마별 테넌트 라우팅은 이 claim을 기준으로 동작한다.
+- `roles`: 로그인 시점의 사용자 역할 목록 (예: `["ROLE_USER", "ROLE_ADMIN"]`)
 - 서명: `signWith(actualSecretKey)`
 
 Refresh Token 생성 시 포함되는 값:
@@ -61,13 +65,13 @@ Refresh Token은 `validateRefreshToken()`에서 claims를 파싱한 뒤 `type` c
 
 두 필터 모두 `Authorization` 헤더에서 `Bearer ` prefix를 제거해 토큰을 추출한다. 토큰이 없으면 즉시 401을 반환하지 않고 다음 필터로 넘긴다. 공개 경로는 각 서비스의 Spring Security 설정에서 `permitAll()`로 처리할 수 있게 하기 위한 구조이다.
 
-토큰이 있으면 `JwtAuthenticationHandler.validateToken()`을 호출한다. 이 메서드는 토큰 검증 결과와 함께 path, method, clientIp, username, tenantId를 `JwtAuthenticationContext`에 담는다.
+토큰이 있으면 `JwtAuthenticationHandler.validateToken()`을 호출한다. 이 메서드는 토큰 검증 결과와 함께 path, method, clientIp, username, tenantId, tenantSchema, roles를 `JwtAuthenticationContext`에 담는다.
 
-검증에 성공하면 `JwtAuthenticationHandler.createAuthentication()`이 Spring Security `UsernamePasswordAuthenticationToken`을 생성한다. 현재 구현은 권한 claim을 읽지 않고 기본 권한 `ROLE_USER`를 부여한다.
+검증에 성공하면 `JwtAuthenticationHandler.createAuthentication()`이 Spring Security `UsernamePasswordAuthenticationToken`을 생성한다. principal은 `JwtUserPrincipal`(username/tenantId/tenantSchema를 담는 `AuthenticatedPrincipal` 구현체, `getName()`은 username을 반환하므로 기존에 `authentication.getName()`을 쓰던 코드는 그대로 동작)이고, 권한은 토큰의 `roles` claim으로부터 구성한 `GrantedAuthority` 목록이다(claim이 비어 있으면 하위 호환을 위해 `ROLE_USER`로 대체).
 
-Servlet 환경에서는 `SecurityContextHolder.getContext().setAuthentication(authentication)`으로 인증 정보를 저장하고, 요청 완료 후 `SecurityContextHolder.clearContext()`로 정리한다.
+Servlet 환경에서는 `SecurityContextHolder.getContext().setAuthentication(authentication)`으로 인증 정보를 저장하고, principal이 `JwtUserPrincipal`이면 `com.common.jwt.tenant.TenantContext`(ThreadLocal)에 `tenantSchema`도 함께 세팅한다. 요청 완료 후 `SecurityContextHolder.clearContext()`와 `TenantContext.clear()`로 모두 정리한다. `board-service`는 이 `TenantContext` 값을 Hibernate `CurrentTenantIdentifierResolver`가 읽어 `SET search_path`로 실제 테넌트 스키마를 전환하는 데 사용한다(자세한 내용은 [tenant-schema-routing.md](tenant-schema-routing.md) 참고).
 
-Reactive 환경에서는 `ReactiveSecurityContextHolder.withAuthentication(authentication)`을 Reactor context에 넣는다.
+Reactive 환경(`api-gateway`)에서는 `ReactiveSecurityContextHolder.withAuthentication(authentication)`을 Reactor context에 넣는다. `UserContextFilter`는 이 Authentication의 principal이 `JwtUserPrincipal`이면 `X-Tenant-Schema`, `X-User-Roles` 헤더도 다운스트림 서비스로 전달한다(관측/로깅용이며, `board-service` 자체는 JWT를 직접 검증하므로 이 헤더에 의존하지 않는다).
 
 ## 블랙리스트 처리
 
@@ -85,11 +89,11 @@ API Gateway에서는 `JwtFilterConfigurer.createReactiveFilter()`로 `ReactiveJw
 
 로그인/인증 서비스에서는 `JwtTokenProvider.generateAccessToken()`과 `generateRefreshToken()`을 사용해 토큰을 발급한다.
 
-각 서비스의 비즈니스 로직에서는 Spring Security의 현재 `Authentication`을 통해 username을 얻을 수 있고, tenantId가 필요하면 토큰 claim을 직접 꺼내거나 Authentication principal/details 확장이 필요하다.
+각 서비스의 비즈니스 로직에서는 Spring Security의 현재 `Authentication`을 통해 username(`getName()`)을 얻을 수 있고, tenantId/tenantSchema가 필요하면 principal을 `JwtUserPrincipal`로 캐스팅해서 꺼낸다. 요청 스레드 안에서 현재 테넌트 스키마만 필요하다면 `com.common.jwt.tenant.TenantContext.getCurrentTenant()`를 사용한다.
 
 ## 현재 구현상 유의점
 
 - Access Token에는 `type=access` claim이 없다. `validateToken()`은 refresh token도 일반 JWT로는 유효하다고 판단할 수 있다.
-- `createAuthentication()`은 role claim을 읽지 않고 항상 `ROLE_USER`만 부여한다.
-- `tenantId`는 `JwtAuthenticationContext`에는 들어가지만 생성되는 Authentication 객체에는 별도로 담기지 않는다.
-- 테스트의 `TEST_EXPIRATION_TIME = 3600`은 주석상 1시간이지만 구현은 millisecond 값으로 더한다. 실제로는 3.6초로 동작한다. 운영 설정에서는 만료시간 단위를 명확히 맞춰야 한다.
+- 테스트의 `TEST_EXPIRATION_TIME = 3600`은 주석상 1시간이지만 구현은 millisecond 값으로 더한다. 실제로는 3.6초로 동작한다. 운영 설정에서는 만료시간 단위를 명확히 맞춰야 한다. (`JwtUtilTest#generateAccessToken_ShouldSetCorrectExpirationTime`이 이 단위 불일치 때문에 이미 실패 중이며, 이번 테넌트 스키마 라우팅 작업과는 무관한 기존 결함이다.)
+
+> 2026-09-11 기준: 과거에 이 문서가 지적하던 "role claim을 읽지 않고 항상 ROLE_USER만 부여", "tenantId가 Authentication 객체에 담기지 않음" 문제는 테넌트 스키마 라우팅 작업에서 해결되었다. 자세한 배경과 전체 구조는 [tenant-schema-routing.md](tenant-schema-routing.md) 참고.

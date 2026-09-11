@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 import javax.crypto.SecretKey;
 
 public class JwtUtil {
@@ -21,7 +22,12 @@ public class JwtUtil {
   }
 
   public static String generateAccessToken(
-      String username, String tenantId, SecretKey actualSecretKey, long accessTokenExpirationTime) {
+      String username,
+      String tenantId,
+      String tenantSchema,
+      List<String> roles,
+      SecretKey actualSecretKey,
+      long accessTokenExpirationTime) {
     Date now = new Date();
     // accessTokenExpirationTime에 설정된 만료 시간을 사용하여 만료 날짜를 계산합니다.
     Date expiryDate = new Date(now.getTime() + accessTokenExpirationTime);
@@ -31,6 +37,8 @@ public class JwtUtil {
         .issuedAt(now) // 토큰 발급 시간
         .expiration(expiryDate) // 토큰 만료 시간
         .claim("tenantId", tenantId)
+        .claim("tenantSchema", tenantSchema)
+        .claim("roles", roles)
         .signWith(actualSecretKey) // SecretKey를 사용하여 서명
         .compact();
   }

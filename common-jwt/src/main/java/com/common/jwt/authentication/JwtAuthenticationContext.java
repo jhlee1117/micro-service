@@ -1,6 +1,7 @@
 package com.common.jwt.authentication;
 
 import com.common.jwt.TokenValidationResult;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,8 @@ public class JwtAuthenticationContext {
   private final TokenValidationResult validationResult;
   private final String username;
   private final String tenantId;
+  private final String tenantSchema;
+  private final List<String> roles;
 
   public boolean isTokenValid() {
     return validationResult != null && validationResult.isValid();

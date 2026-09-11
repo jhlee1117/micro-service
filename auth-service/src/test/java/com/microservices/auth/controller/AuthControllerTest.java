@@ -1,6 +1,7 @@
 package com.microservices.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -78,7 +79,8 @@ public class AuthControllerTest {
             .build();
 
     when(authService.authenticate(any(LoginRequest.class), anyString())).thenReturn(mockResponse);
-    when(menuService.getMenuListByUserInfo(any(Long.class))).thenReturn(Arrays.asList(menuDto));
+    when(menuService.getMenuListByUserInfo(any(Long.class), anyBoolean()))
+        .thenReturn(Arrays.asList(menuDto));
 
     // When & Then
     mockMvc

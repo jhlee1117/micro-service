@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import java.util.List;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,8 @@ class JwtTokenProviderTest {
       "testSecretKeyForJwtTokenGenerationWithMinimum256Bits";
   private static final String TEST_USERNAME = "testUser";
   private static final String TEST_TENANT_ID = "testTenant";
+  private static final String TEST_TENANT_SCHEMA = "test_tenant_schema";
+  private static final List<String> TEST_ROLES = List.of("ROLE_USER");
   private static final long TEST_EXPIRATION_TIME = 3600; // 1시간
 
   private JwtTokenProvider jwtTokenProvider;
@@ -69,7 +72,9 @@ class JwtTokenProviderTest {
   @DisplayName("generateAccessToken - 유효한 파라미터로 JWT 토큰 생성")
   void generateAccessToken_WithValidParameters_ShouldCreateValidToken() {
     // when
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // then
     assertNotNull(token);
@@ -84,7 +89,9 @@ class JwtTokenProviderTest {
   @DisplayName("generateAccessToken - 생성된 토큰의 내용 검증")
   void generateAccessToken_ShouldContainCorrectClaims() {
     // when
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // then
     Claims claims =
@@ -104,7 +111,8 @@ class JwtTokenProviderTest {
   @DisplayName("generateAccessToken - null username으로 토큰 생성")
   void generateAccessToken_WithNullUsername_ShouldCreateToken() {
     // when
-    String token = jwtTokenProvider.generateAccessToken(null, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(null, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // then
     assertNotNull(token);
@@ -115,7 +123,8 @@ class JwtTokenProviderTest {
   @DisplayName("generateAccessToken - null tenantId로 토큰 생성")
   void generateAccessToken_WithNullTenantId_ShouldCreateToken() {
     // when
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, null);
+    String token =
+        jwtTokenProvider.generateAccessToken(TEST_USERNAME, null, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // then
     assertNotNull(token);
@@ -126,7 +135,9 @@ class JwtTokenProviderTest {
   @DisplayName("validateToken - 유효한 토큰 검증")
   void validateToken_WithValidToken_ShouldReturnTrue() {
     // given
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     boolean isValid = jwtTokenProvider.validateToken(token);
@@ -144,7 +155,9 @@ class JwtTokenProviderTest {
             "differentSecretKeyForJwtTokenGenerationWithMinimum256Bits",
             TEST_EXPIRATION_TIME,
             TEST_EXPIRATION_TIME);
-    String token = differentProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        differentProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     boolean isValid = jwtTokenProvider.validateToken(token);
@@ -160,7 +173,8 @@ class JwtTokenProviderTest {
     JwtTokenProvider shortExpirationProvider =
         new JwtTokenProvider(TEST_SECRET_KEY, -3600, TEST_EXPIRATION_TIME); // 과거 만료 시간
     String expiredToken =
-        shortExpirationProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+        shortExpirationProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     boolean isValid = jwtTokenProvider.validateToken(expiredToken);
@@ -206,7 +220,9 @@ class JwtTokenProviderTest {
   @DisplayName("getClaims - 유효한 토큰에서 Claims 추출")
   void getClaims_WithValidToken_ShouldReturnClaims() {
     // given
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     Claims claims = jwtTokenProvider.getClaims(token);
@@ -235,7 +251,9 @@ class JwtTokenProviderTest {
   @DisplayName("getUsername - 유효한 토큰에서 사용자명 추출")
   void getUsername_WithValidToken_ShouldReturnUsername() {
     // given
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     String username = jwtTokenProvider.getUsername(token);
@@ -262,7 +280,9 @@ class JwtTokenProviderTest {
   @DisplayName("getTenantId - 유효한 토큰에서 tenantId 추출")
   void getTenantId_WithValidToken_ShouldReturnTenantId() {
     // given
-    String token = jwtTokenProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        jwtTokenProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     String tenantId = jwtTokenProvider.getTenantId(token);
@@ -319,7 +339,8 @@ class JwtTokenProviderTest {
     String tenantId = "integrationTenant";
 
     // when - 토큰 생성
-    String token = jwtTokenProvider.generateAccessToken(username, tenantId);
+    String token =
+        jwtTokenProvider.generateAccessToken(username, tenantId, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // then - 토큰 검증
     assertTrue(jwtTokenProvider.validateToken(token));
@@ -342,7 +363,9 @@ class JwtTokenProviderTest {
     // given
     JwtTokenProvider longExpirationProvider =
         new JwtTokenProvider(TEST_SECRET_KEY, 7200, TEST_EXPIRATION_TIME); // 2시간
-    String token = longExpirationProvider.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID);
+    String token =
+        longExpirationProvider.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES);
 
     // when
     boolean isValid = jwtTokenProvider.validateToken(token);

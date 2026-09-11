@@ -8,12 +8,21 @@ spring:
     password:
   jpa:
     hibernate:
+      # 로컬 H2 프로파일은 테넌트별 Flyway 마이그레이션 없이 기본(public) 스키마에 자동으로 테이블을 만들어
+      # 빠르게 개발/구동할 수 있게 한다. 실제 테넌트 스키마 분리 검증은 docker(Postgres) 프로파일로 수행한다.
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 eureka:
   client:

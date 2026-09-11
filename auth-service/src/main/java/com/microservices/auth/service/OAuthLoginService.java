@@ -22,6 +22,7 @@ import com.microservices.auth.repository.TenantRepository;
 import com.microservices.auth.repository.UserRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class OAuthLoginService {
+
+  private static final String SUPER_ADMIN_ROLE = "ROLE_SUPER_ADMIN";
 
   private final OAuthAccountRepository oauthAccountRepository;
   private final UserRepository userRepository;
@@ -181,7 +184,12 @@ public class OAuthLoginService {
 
     String username = userDto.getUsername();
     String tenantId = userDto.getTenant().getId().toString();
-    String accessToken = jwtTokenProvider.generateAccessToken(username, tenantId);
+    String tenantSchema = userDto.getTenant().getName();
+    List<String> roles = userDto.getRoles().stream().map(RoleDto::getName).toList();
+    boolean isSuperAdmin = roles.contains(SUPER_ADMIN_ROLE);
+
+    String accessToken =
+        jwtTokenProvider.generateAccessToken(username, tenantId, tenantSchema, roles);
     String refreshToken = jwtTokenProvider.generateRefreshToken(username, tenantId);
 
     refreshTokenService.saveRefreshToken(
@@ -198,7 +206,9 @@ public class OAuthLoginService {
         .tenantName(userDto.getTenant().getName())
         .email(userDto.getEmail())
         .tenantId(tenantId)
-        .roles(userDto.getRoles().stream().map(RoleDto::getName).toList())
+        .tenantSchema(tenantSchema)
+        .roles(roles)
+        .superAdmin(isSuperAdmin)
         .success(true)
         .build();
   }

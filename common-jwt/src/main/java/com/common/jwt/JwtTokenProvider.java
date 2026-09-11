@@ -6,6 +6,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
+import java.util.Collections;
+import java.util.List;
 import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +35,11 @@ public class JwtTokenProvider {
     this.actualSecretKey = JwtUtil.generateSecretKey(secretKeyString);
   }
 
-  public String generateAccessToken(String username, String tenantId) {
+  public String generateAccessToken(
+      String username, String tenantId, String tenantSchema, List<String> roles) {
     // Generate an access token using the actual secret key
     return JwtUtil.generateAccessToken(
-        username, tenantId, actualSecretKey, accessTokenExpirationTime);
+        username, tenantId, tenantSchema, roles, actualSecretKey, accessTokenExpirationTime);
   }
 
   public String generateRefreshToken(String username, String tenantId) {
@@ -78,6 +81,16 @@ public class JwtTokenProvider {
   public String getTenantId(String token) {
     // ��ū���� tenantId�� �����ϴ� �޼���
     return getClaims(token).get("tenantId", String.class);
+  }
+
+  public String getTenantSchema(String token) {
+    return getClaims(token).get("tenantSchema", String.class);
+  }
+
+  @SuppressWarnings("unchecked")
+  public List<String> getRoles(String token) {
+    List<String> roles = getClaims(token).get("roles", List.class);
+    return roles == null ? Collections.emptyList() : roles;
   }
 
   public SecretKey getActualSecretKey() {

@@ -160,4 +160,4 @@ erDiagram
 - **`tenant_modules`**: 특정 테넌트가 활성화한 모듈과 해당 플랜 유형(`plan_type`)을 관리합니다.
 
 ### 게시판 서비스 (`board-service`)
-- **`boards`**: 자유게시판 정보 테이블. `author_id`는 MSA 아키텍처 원칙에 따라 외래 키(FK) 제약 조건 없이 물리적으로 분리되어 있으며, 논리적으로 `appuser` 테이블의 사용자 계정명(`username`)과 결합됩니다.
+- **`boards`**: 자유게시판 정보 테이블. `author_id`는 MSA 아키텍처 원칙에 따라 외래 키(FK) 제약 조건 없이 물리적으로 분리되어 있으며, 논리적으로 `appuser` 테이블의 사용자 계정명(`username`)과 결합됩니다. 위 ERD는 테이블 구조만 나타내며, 실제로는 `public` 같은 단일 스키마가 아니라 **테넌트마다 별도로 만들어진 스키마 안에** 각각 `boards` 테이블이 존재합니다(스키마-당-테넌트). 스키마 생성 및 라우팅 방식은 [../architecture/tenant-schema-routing.md](../architecture/tenant-schema-routing.md) 참고.
