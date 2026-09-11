@@ -27,9 +27,11 @@ public class LoginResponse {
 
   private String tenantId;
   private String tenantName;
+  private String tenantSchema;
   // private String entityId;
 
   private List<String> roles;
+  private boolean superAdmin;
   private String name;
   private String email;
 

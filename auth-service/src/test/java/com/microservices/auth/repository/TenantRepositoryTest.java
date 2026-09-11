@@ -3,6 +3,7 @@ package com.microservices.auth.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.microservices.auth.config.JpaAuditConfig;
 import com.microservices.auth.config.TestQuerydslConfig;
 import com.microservices.auth.domain.entity.Tenant;
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 
 @DataJpaTest
-@Import(TestQuerydslConfig.class)
+@Import({TestQuerydslConfig.class, JpaAuditConfig.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @org.springframework.test.context.ActiveProfiles("test")
 public class TenantRepositoryTest {

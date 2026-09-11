@@ -51,6 +51,8 @@ public class AuthController {
 
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
+  private static final String SUPER_ADMIN_ROLE = "ROLE_SUPER_ADMIN";
+
   @Operation(summary = "사용자 로그인", description = "사용자명과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.")
   @ApiResponses(
       value = {
@@ -98,7 +100,10 @@ public class AuthController {
       response.setRefreshToken(null);
       log.info("Refresh token cookie set for user: {}", request.getUsername());
 
-      List<MenuDto> menuList = menuService.getMenuListByUserInfo(response.getUserId());
+      boolean isSuperAdmin =
+          response.getRoles() != null && response.getRoles().contains(SUPER_ADMIN_ROLE);
+      List<MenuDto> menuList =
+          menuService.getMenuListByUserInfo(response.getUserId(), isSuperAdmin);
       response.setMenuList(menuList);
     }
     return ResponseEntity.ok(response);

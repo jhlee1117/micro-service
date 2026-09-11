@@ -19,6 +19,8 @@
 - `architecture/architecture_docker_compose.png`: Docker Compose 아키텍처 이미지
 - `architecture/common-jwt-analysis.md`: 공통 JWT 라이브러리 구조 및 유의점 분석
 - `architecture/common-jwt-flow.mmd`: 공통 JWT 인증 흐름 Mermaid 다이어그램
+- `architecture/tenant-schema-routing.md`: 로그인 이후 테넌트 스키마 라우팅 및 SUPER_ADMIN 전체 접근 구조
+- `architecture/archunit-rules.md`: 모듈별 ArchUnit 아키텍처 규칙 (새 패키지 추가 전 필독)
 - `architecture/system-architecture.png`: 시스템 아키텍처 이미지
 - `database/db_relationship.md`: 데이터베이스 ERD 및 테이블 정의
 - `database/db_relationship.drawio`: DB 관계도 Draw.io 원본

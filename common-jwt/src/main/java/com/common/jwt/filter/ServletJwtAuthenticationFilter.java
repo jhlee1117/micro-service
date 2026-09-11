@@ -2,7 +2,9 @@ package com.common.jwt.filter;
 
 import com.common.jwt.authentication.JwtAuthenticationContext;
 import com.common.jwt.authentication.JwtAuthenticationHandler;
+import com.common.jwt.authentication.JwtUserPrincipal;
 import com.common.jwt.authentication.TokenBlacklistService;
+import com.common.jwt.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,13 +84,17 @@ public class ServletJwtAuthenticationFilter extends OncePerRequestFilter {
 
     // SecurityContext에 인증 정보 설정
     SecurityContextHolder.getContext().setAuthentication(authentication);
+    if (authentication.getPrincipal() instanceof JwtUserPrincipal principal) {
+      TenantContext.setCurrentTenant(principal.getTenantSchema());
+    }
     authenticationHandler.logAuthenticationSuccess(context);
 
     try {
       filterChain.doFilter(request, response);
     } finally {
-      // 요청 완료 후 SecurityContext 정리
+      // 요청 완료 후 SecurityContext 및 TenantContext 정리
       SecurityContextHolder.clearContext();
+      TenantContext.clear();
     }
   }
 

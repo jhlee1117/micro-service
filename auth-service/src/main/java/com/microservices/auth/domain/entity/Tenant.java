@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,4 +39,9 @@ public class Tenant extends BaseAuditEntity {
 
   @Column(name = "status", nullable = false)
   private boolean status;
+
+  /** 이 테넌트의 스키마가 실제로 위치한 물리 DB(db_instance.shard_key)를 가리킨다. */
+  @Column(name = "shard_key", nullable = false, length = 50)
+  @Builder.Default
+  private String shardKey = "shard-1";
 }

@@ -63,4 +63,47 @@ class BoardArchitectureTest {
   @ArchTest
   static final ArchRule top_level_packages_should_be_free_of_cycles =
       slices().matching("com.microservices.board.(*)..").should().beFreeOfCycles();
+
+  @ArchTest
+  static final ArchRule event_classes_should_not_depend_on_other_board_layers =
+      noClasses()
+          .that()
+          .resideInAPackage("..event..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage(
+              "..controller..",
+              "..service..",
+              "..repository..",
+              "..config..",
+              "..listener..",
+              "..security..",
+              "..tenant..");
+
+  @ArchTest
+  static final ArchRule listener_should_not_depend_on_controller_or_repository =
+      noClasses()
+          .that()
+          .resideInAPackage("..listener..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage("..controller..", "..repository..");
+
+  @ArchTest
+  static final ArchRule tenant_infra_should_not_depend_on_web_layer =
+      noClasses()
+          .that()
+          .resideInAPackage("..tenant..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage("..controller..", "..service..", "..repository..");
+
+  @ArchTest
+  static final ArchRule security_filters_should_not_depend_on_web_layer =
+      noClasses()
+          .that()
+          .resideInAPackage("..security..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage("..controller..", "..service..", "..repository..");
 }

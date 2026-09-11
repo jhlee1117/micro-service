@@ -58,8 +58,18 @@ public class JwtAuthenticationHandler {
       try {
         String username = jwtTokenProvider.getUsername(token);
         String tenantId = jwtTokenProvider.getTenantId(token);
-        contextBuilder.username(username).tenantId(tenantId);
-        logger.debug("토큰에서 사용자 정보 추출 성공: username={}, tenantId={}", username, tenantId);
+        String tenantSchema = jwtTokenProvider.getTenantSchema(token);
+        List<String> roles = jwtTokenProvider.getRoles(token);
+        contextBuilder
+            .username(username)
+            .tenantId(tenantId)
+            .tenantSchema(tenantSchema)
+            .roles(roles);
+        logger.debug(
+            "토큰에서 사용자 정보 추출 성공: username={}, tenantId={}, tenantSchema={}",
+            username,
+            tenantId,
+            tenantSchema);
       } catch (Exception e) {
         logger.error("토큰에서 사용자 정보 추출 실패: {}", e.getMessage());
         return contextBuilder
@@ -109,10 +119,17 @@ public class JwtAuthenticationHandler {
       return null;
     }
 
-    // 기본 권한 설정 (필요에 따라 토큰에서 권한 정보를 추출할 수 있음)
-    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+    List<String> roleNames = context.getRoles();
+    List<SimpleGrantedAuthority> authorities =
+        (roleNames == null || roleNames.isEmpty())
+            ? List.of(new SimpleGrantedAuthority("ROLE_USER"))
+            : roleNames.stream().map(SimpleGrantedAuthority::new).toList();
 
-    return new UsernamePasswordAuthenticationToken(context.getUsername(), null, authorities);
+    JwtUserPrincipal principal =
+        new JwtUserPrincipal(
+            context.getUsername(), context.getTenantId(), context.getTenantSchema());
+
+    return new UsernamePasswordAuthenticationToken(principal, null, authorities);
   }
 
   /** 인증 실패 로그 기록 */

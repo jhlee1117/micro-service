@@ -8,11 +8,21 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      # 스키마별 테넌트 구조에서는 검증할 단일 스키마가 없으므로 Hibernate 자동 스키마 관리를 끈다.
+      # boards 테이블은 tenant.created 이벤트 수신 시 Flyway로 각 테넌트 스키마 안에 생성된다
+      # (BoardSchemaMigrationService).
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: 5672
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
 
 eureka:
   client:

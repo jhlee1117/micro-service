@@ -43,7 +43,11 @@ public class MenuService {
 
   // @Cacheable(value = "user-menus", key = "#userId")
   @Transactional(readOnly = true)
-  public List<MenuDto> getMenuListByUserInfo(Long userId) {
+  public List<MenuDto> getMenuListByUserInfo(Long userId, boolean isSuperAdmin) {
+    if (isSuperAdmin) {
+      return getMenuListForSuperAdmin(userId);
+    }
+
     QUser qUser = QUser.user;
     QUserRole qUserRole = QUserRole.userRole;
     QRolePermission qRolePermission = QRolePermission.rolePermission;
@@ -82,6 +86,43 @@ public class MenuService {
             qUser.enabled.isTrue(),
             qTenantModule.enabled.isTrue(),
             qMenu.isActive.isTrue())
+        .distinct()
+        .fetch();
+  }
+
+  /** ROLE_SUPER_ADMIN은 테넌트-모듈 활성화 여부와 무관하게, 자신의 역할에 부여된 모든 메뉴를 볼 수 있다. */
+  private List<MenuDto> getMenuListForSuperAdmin(Long userId) {
+    QUser qUser = QUser.user;
+    QUserRole qUserRole = QUserRole.userRole;
+    QRolePermission qRolePermission = QRolePermission.rolePermission;
+    QPermission qPermission = QPermission.permission;
+    QMenuPermission qMenuPermission = QMenuPermission.menuPermission;
+    QMenu qMenu = QMenu.menu;
+
+    return jpaQueryFactory
+        .select(
+            Projections.constructor(
+                MenuDto.class,
+                qMenu.menuCode,
+                qMenu.parentMenu.menuCode,
+                qMenu.module.id,
+                qMenu.path,
+                qMenu.apiPath,
+                qMenu.component,
+                qMenu.description,
+                qMenu.menuAlias,
+                qMenu.displayOrder,
+                qMenu.isActive,
+                qMenu.icon))
+        .from(qUser)
+        .join(qUser.userRoles, qUserRole)
+        .join(qRolePermission)
+        .on(qRolePermission.role.eq(qUserRole.role))
+        .join(qRolePermission.permission, qPermission)
+        .join(qMenuPermission)
+        .on(qMenuPermission.permission.eq(qPermission))
+        .join(qMenuPermission.menu, qMenu)
+        .where(qUser.id.eq(userId), qUser.enabled.isTrue(), qMenu.isActive.isTrue())
         .distinct()
         .fetch();
   }

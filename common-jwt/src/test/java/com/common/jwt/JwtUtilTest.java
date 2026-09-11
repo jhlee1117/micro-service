@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import java.util.Date;
+import java.util.List;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,8 @@ class JwtUtilTest {
       "testSecretKeyForJwtTokenGenerationWithMinimum256Bits";
   private static final String TEST_USERNAME = "testUser";
   private static final String TEST_TENANT_ID = "testTenant";
+  private static final String TEST_TENANT_SCHEMA = "test_tenant_schema";
+  private static final List<String> TEST_ROLES = List.of("ROLE_USER");
   private static final long TEST_EXPIRATION_TIME = 3600; // 1시간
 
   private SecretKey secretKey;
@@ -84,7 +87,13 @@ class JwtUtilTest {
   void generateAccessToken_WithValidParameters_ShouldCreateValidToken() {
     // when
     String token =
-        JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, secretKey, TEST_EXPIRATION_TIME);
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME,
+            TEST_TENANT_ID,
+            TEST_TENANT_SCHEMA,
+            TEST_ROLES,
+            secretKey,
+            TEST_EXPIRATION_TIME);
 
     // then
     assertNotNull(token);
@@ -100,7 +109,13 @@ class JwtUtilTest {
   void generateAccessToken_ShouldContainCorrectClaims() {
     // when
     String token =
-        JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, secretKey, TEST_EXPIRATION_TIME);
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME,
+            TEST_TENANT_ID,
+            TEST_TENANT_SCHEMA,
+            TEST_ROLES,
+            secretKey,
+            TEST_EXPIRATION_TIME);
 
     // then
     Claims claims =
@@ -108,6 +123,7 @@ class JwtUtilTest {
 
     assertEquals(TEST_USERNAME, claims.getSubject());
     assertEquals(TEST_TENANT_ID, claims.get("tenantId", String.class));
+    assertEquals(TEST_TENANT_SCHEMA, claims.get("tenantSchema", String.class));
     assertNotNull(claims.getIssuedAt());
     assertNotNull(claims.getExpiration());
   }
@@ -118,7 +134,13 @@ class JwtUtilTest {
     // when
     long beforeTokenGeneration = System.currentTimeMillis();
     String token =
-        JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, secretKey, TEST_EXPIRATION_TIME);
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME,
+            TEST_TENANT_ID,
+            TEST_TENANT_SCHEMA,
+            TEST_ROLES,
+            secretKey,
+            TEST_EXPIRATION_TIME);
     long afterTokenGeneration = System.currentTimeMillis();
 
     // then
@@ -142,7 +164,8 @@ class JwtUtilTest {
   void generateAccessToken_WithNullUsername_ShouldCreateToken() {
     // when
     String token =
-        JwtUtil.generateAccessToken(null, TEST_TENANT_ID, secretKey, TEST_EXPIRATION_TIME);
+        JwtUtil.generateAccessToken(
+            null, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES, secretKey, TEST_EXPIRATION_TIME);
 
     // then
     assertNotNull(token);
@@ -154,7 +177,8 @@ class JwtUtilTest {
   void generateAccessToken_WithNullTenantId_ShouldCreateToken() {
     // when
     String token =
-        JwtUtil.generateAccessToken(TEST_USERNAME, null, secretKey, TEST_EXPIRATION_TIME);
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME, null, TEST_TENANT_SCHEMA, TEST_ROLES, secretKey, TEST_EXPIRATION_TIME);
 
     // then
     assertNotNull(token);
@@ -168,7 +192,13 @@ class JwtUtilTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> {
-          JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, null, TEST_EXPIRATION_TIME);
+          JwtUtil.generateAccessToken(
+              TEST_USERNAME,
+              TEST_TENANT_ID,
+              TEST_TENANT_SCHEMA,
+              TEST_ROLES,
+              null,
+              TEST_EXPIRATION_TIME);
         });
   }
 
@@ -176,7 +206,9 @@ class JwtUtilTest {
   @DisplayName("generateAccessToken - 음수 만료 시간으로 토큰 생성")
   void generateAccessToken_WithNegativeExpirationTime_ShouldCreateTokenWithPastExpiration() {
     // when
-    String token = JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, secretKey, -3600);
+    String token =
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES, secretKey, -3600);
 
     // then
     assertNotNull(token);
@@ -199,7 +231,9 @@ class JwtUtilTest {
   @DisplayName("generateAccessToken - 0 만료 시간으로 토큰 생성")
   void generateAccessToken_WithZeroExpirationTime_ShouldCreateTokenWithCurrentExpiration() {
     // when
-    String token = JwtUtil.generateAccessToken(TEST_USERNAME, TEST_TENANT_ID, secretKey, 0);
+    String token =
+        JwtUtil.generateAccessToken(
+            TEST_USERNAME, TEST_TENANT_ID, TEST_TENANT_SCHEMA, TEST_ROLES, secretKey, 0);
 
     // then
     assertNotNull(token);

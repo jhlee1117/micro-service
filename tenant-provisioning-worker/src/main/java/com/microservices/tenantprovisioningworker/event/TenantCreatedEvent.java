@@ -17,5 +17,6 @@ public class TenantCreatedEvent {
   private String eventId;
   private Long tenantId;
   private String tenantName;
+  private String shardKey;
   private LocalDateTime timestamp;
 }

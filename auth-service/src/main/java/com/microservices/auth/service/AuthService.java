@@ -11,6 +11,7 @@ import com.microservices.auth.dto.RegisterResponse;
 import com.microservices.auth.dto.RoleDto;
 import com.microservices.auth.dto.UserDto;
 import com.microservices.auth.repository.UserRepository;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,8 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+  private static final String SUPER_ADMIN_ROLE = "ROLE_SUPER_ADMIN";
 
   @Autowired private AuthenticationManager authenticationManager;
 
@@ -70,7 +73,12 @@ public class AuthService {
 
     String username = userDto.getUsername();
     String tenantId = userDto.getTenant().getId().toString();
-    String accessToken = jwtTokenProvider.generateAccessToken(username, tenantId);
+    String tenantSchema = userDto.getTenant().getName();
+    List<String> roles = userDto.getRoles().stream().map(RoleDto::getName).toList();
+    boolean isSuperAdmin = roles.contains(SUPER_ADMIN_ROLE);
+
+    String accessToken =
+        jwtTokenProvider.generateAccessToken(username, tenantId, tenantSchema, roles);
     String refreshToken = jwtTokenProvider.generateRefreshToken(username, tenantId);
 
     refreshTokenService.saveRefreshToken(
@@ -87,7 +95,9 @@ public class AuthService {
         .tenantName(userDto.getTenant().getName())
         .email(userDto.getEmail())
         .tenantId(tenantId)
-        .roles(userDto.getRoles().stream().map(RoleDto::getName).toList())
+        .tenantSchema(tenantSchema)
+        .roles(roles)
+        .superAdmin(isSuperAdmin)
         .success(true)
         .build();
   }
@@ -142,7 +152,12 @@ public class AuthService {
               .findByUsername(username)
               .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
-      String newAccessToken = jwtTokenProvider.generateAccessToken(username, tenantId);
+      String tenantSchema = user.getTenant() != null ? user.getTenant().getName() : null;
+      List<String> roles = user.getRoleNames().stream().toList();
+      boolean isSuperAdmin = roles.contains(SUPER_ADMIN_ROLE);
+
+      String newAccessToken =
+          jwtTokenProvider.generateAccessToken(username, tenantId, tenantSchema, roles);
       String newRefreshToken = jwtTokenProvider.generateRefreshToken(username, tenantId);
 
       refreshTokenService.rotateRefreshToken(
@@ -162,7 +177,9 @@ public class AuthService {
               user.getTenant() != null && user.getTenant().getId() != null
                   ? user.getTenant().getId().toString()
                   : tenantId)
-          .roles(user.getRoleNames().stream().toList())
+          .tenantSchema(tenantSchema)
+          .roles(roles)
+          .superAdmin(isSuperAdmin)
           .message("Token refreshed successfully")
           .success(true)
           .build();

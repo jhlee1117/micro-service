@@ -8,6 +8,7 @@
 erDiagram
   TENANT ||--o{ APPUSER : "has users"
   TENANT ||--o{ TENANT_MODULES : "has modules"
+  DB_INSTANCE ||--o{ TENANT : "hosts schema for"
   MODULE ||--o{ TENANT_MODULES : "module configuration"
   MODULE ||--o{ MENUS : "defines menus"
   MENUS |o--o{ MENUS : "parent-child relationship"
@@ -20,6 +21,18 @@ erDiagram
     bigint id PK
     varchar name UK
     boolean status "Active or Inactive"
+    varchar shard_key FK "-> DB_INSTANCE.shard_key, default 'shard-1'"
+    timestamp created_at
+    timestamp updated_at
+    varchar created_by
+    varchar updated_by
+  }
+
+  DB_INSTANCE {
+    bigint id PK
+    varchar shard_key UK
+    varchar status "ACTIVE, DRAINING, FULL"
+    integer capacity_weight
     timestamp created_at
     timestamp updated_at
     varchar created_by
@@ -136,7 +149,8 @@ erDiagram
 ## 2. 테이블 정의 요약
 
 ### Auth 서비스 (`auth-service`)
-- **`tenant`**: 테넌트(고객사) 정보 테이블. 멀티테넌시(Multi-tenancy) 지원을 위해 `appuser` 및 `tenant_modules`가 이를 참조합니다.
+- **`db_instance`**: 테넌트 스키마가 실제로 배치되는 물리 DB(shard)의 메타데이터. 접속 정보(URL/자격증명)는 저장하지 않고, 각 서비스의 설정(config server)에서 `shard_key`를 키로 관리합니다. 테넌트 수가 늘어나 인스턴스를 추가할 때 이 테이블에 행을 추가하는 방식으로 확장합니다.
+- **`tenant`**: 테넌트(고객사) 정보 테이블. 멀티테넌시(Multi-tenancy) 지원을 위해 `appuser` 및 `tenant_modules`가 이를 참조합니다. `shard_key`로 어느 물리 DB에 자신의 스키마가 있는지 가리키며, 기본값은 `'shard-1'`입니다.
 - **`appuser`**: 사용자 정보 테이블. 특정 테넌트(`tenant_id`)에 속할 수 있습니다.
 - **`roles`**: 사용자 역할(Role)을 관리하는 테이블 (예: `ROLE_ADMIN`, `ROLE_USER`).
 - **`appuser_roles`**: 사용자와 역할 간의 다대다(N:M) 관계 매핑 테이블.
@@ -146,4 +160,4 @@ erDiagram
 - **`tenant_modules`**: 특정 테넌트가 활성화한 모듈과 해당 플랜 유형(`plan_type`)을 관리합니다.
 
 ### 게시판 서비스 (`board-service`)
-- **`boards`**: 자유게시판 정보 테이블. `author_id`는 MSA 아키텍처 원칙에 따라 외래 키(FK) 제약 조건 없이 물리적으로 분리되어 있으며, 논리적으로 `appuser` 테이블의 사용자 계정명(`username`)과 결합됩니다.
+- **`boards`**: 자유게시판 정보 테이블. `author_id`는 MSA 아키텍처 원칙에 따라 외래 키(FK) 제약 조건 없이 물리적으로 분리되어 있으며, 논리적으로 `appuser` 테이블의 사용자 계정명(`username`)과 결합됩니다. 위 ERD는 테이블 구조만 나타내며, 실제로는 `public` 같은 단일 스키마가 아니라 **테넌트마다 별도로 만들어진 스키마 안에** 각각 `boards` 테이블이 존재합니다(스키마-당-테넌트). 스키마 생성 및 라우팅 방식은 [../architecture/tenant-schema-routing.md](../architecture/tenant-schema-routing.md) 참고.

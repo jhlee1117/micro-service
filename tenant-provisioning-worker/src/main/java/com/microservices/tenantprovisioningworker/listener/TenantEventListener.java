@@ -21,7 +21,7 @@ public class TenantEventListener {
     log.info("Received TenantCreatedEvent: {}", event);
 
     try {
-      schemaProvisioningService.createTenantSchema(event.getTenantName());
+      schemaProvisioningService.createTenantSchema(event.getTenantName(), event.getShardKey());
       log.info("Finished processing for event: {}", event.getEventId());
     } catch (Exception e) {
       log.error(
@@ -37,7 +37,7 @@ public class TenantEventListener {
     log.info("Received TenantDroppedEvent: {}", event);
 
     try {
-      schemaProvisioningService.dropTenantSchema(event.getTenantName());
+      schemaProvisioningService.dropTenantSchema(event.getTenantName(), event.getShardKey());
       log.info("Finished processing for event: {}", event.getEventId());
     } catch (Exception e) {
       log.error(
